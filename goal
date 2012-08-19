@@ -1,0 +1,23 @@
+MiPyBot goals
+-------------
+
+***IMPLEMENTED***
+
+-Folder module for different protocol versions
+    -Each protocol module name starts with v followed by the version number in decimal
+    -In each protocol folder, the __init__.py script will contain the variables PROTOCOL_VERSION (the protocol version in decimal) and MINECRAFT_VERSION (the versions of Minecraft that support this protocol version)
+    -There will be a packets folder that will contain packet handler code
+        -Each packet handler will be in a separate file, and can be added/removed without changes to the code.
+        -Each packet handler will have a send, process, and getlength functions.
+        -Each packet handler will define which packet ID it deals with, so the packet processor will know which packet handler to send data to.
+
+***TODO***
+
+-Flexible user interface
+    -A user can customize a robot base class parameters then create an object from that.
+    -Multiple bots can be run at once (Using multi-threading).
+
+-Modular bot script system (plugins)
+    -Each script will be a separate file.
+    -Each script can be loaded and unloaded at any time, unless by design it cannot.
+    -There will be many functions that are relatively easy to learn and use in the scripting.

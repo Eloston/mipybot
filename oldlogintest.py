@@ -1,5 +1,7 @@
 # The really messy, ugly, one-file test script used to learn the Minecraft protocol
 # This script can be run directly
+# This script wil not do encryption/decryption correctly due to only using one instance of an AES cipher instead of two.
+# This script will also fail to parse more than one packet comming in.
 '''
 Information here is using:
 http://www.wiki.vg/Protocol
