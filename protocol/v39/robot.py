@@ -1,70 +1,106 @@
 import socket
 import struct
-import binascii
 import threading
 import time
-import Crypto.Random
-from Crypto.Cipher import AES, PKCS1_v1_5
-from Crypto.PublicKey import RSA
+from . import library
 
-class base_robot():
+class main():
     def __init__(self):
-        self.PACKETS = __import__("packets", globals=globals(), locals=locals())
+        packets = __import__("packets", globals=globals(), locals=locals())
+        self.PACKETS = packets.handlermanager(self)
         self.PACKETS.initiatehandlers()
-        self.USERNAME = None
-        self.HOST = None
-        self.PORT = 25565
-        self.STRING_ENCODE = "UTF-16be"
-        self.SOCKET = None
-        self.ENCRYPTION_ENABLED = False
-        # The AES cipher instance must be different, but to create them is the same.
-        self.AESCIPHERENC = None
-        self.AESCIPHERDEC = None
-        self.AESKEY = None # When defined, it will not be encoded with the server's public key
-        self.SHORT_LENGTH = 2 # The length of a short in bytes
-        self.INTEGER_LENGTH = 4 # The length of a integer in bytes
-        self.PROTOCOL = 39
-        self.LISTENTHREAD = threading.Thread(target=self.listen)
-        self.STOPPING = False # Whether the robot is shutting down or not
-        self.PKCSCIPHER = None
-        self.ENCRYPTIONREQUESTLIST = None # The Server ID, Public Key, and Verification Token list.
-        self.ISDEAD = False
 
-    def generateAES(self):
-        self.AESKEY = Crypto.Random.new().read(AES.block_size)
-        self.AESCIPHERENC = AES.new(self.AESKEY, AES.MODE_CFB, self.AESKEY)
-        self.AESCIPHERDEC = AES.new(self.AESKEY, AES.MODE_CFB, self.AESKEY)
+        self.CONVERTER = library.converter()
+
+        self.ENCRYPTION = library.encryption()
+
+        self.CHARACTER = character()
+
+        self.NETWORK = network(self)
+
+        self.STOPPING = False # Whether the robot is shutting down or not
 
     def start(self):
-        self.generateAES()
+        '''
+        Start the robot
+        '''
+        self.NETWORK.start()
+
+    def stop(self):
+        '''
+        Stop the robot
+        '''
+        self.NETWORK.stop()
+
+class character():
+    def __init__(self):
+        self.ISDEAD = False
+        self.ENTITYID = None # Players Entity ID
+        self.WORLDINFO = {"leveltype": None, "gamemode": 0, "dimension": 0, "difficulty": 0, "maxheight": 256}
+        self.POSITION = {'x': 0, 'y': 0, 'z': 0, 'yaw': 0, 'pitch': 0}
+        self.HEALTH = {'hp': 0, 'food': 0, 'foodsaturation': 0.0}
+        self.TIME = 0 # Time in ticks
+        self.USERNAME = None
+
+    def updateworldinfo(self, newinfodict):
+        '''
+        Update the world info
+        '''
+        for item in list(newinfodict.keys()):
+            self.WORLDINFO[item] = newinfodict[item]
+
+    def updateposition(self, newinfodict):
+        for item in list(newinfodict.keys()):
+            self.POSITION[item] = newinfodict[item]
+
+    def updatehealth(self, newinfodict):
+        for item in list(newinfodict.keys()):
+            self.HEALTH[item] = newinfodict[item]
+
+class network():
+    def __init__(self, roboclass):
+        self.LISTENTHREAD = threading.Thread(target=self.listen)
+        self.SOCKET = None
+        self.PROTOCOL = 39
+        self.HOST = None
+        self.PORT = 25565
+        self.SERVER_DISCONNECT = False # Determines if the server disconnected the robot
+        self.ROBOCLASS = roboclass
+        self.MAXPLAYERS = None # Max players on server integer
+
+    def start(self):
+        self.ROBOCLASS.ENCRYPTION.generateAES()
         self.SOCKET = socket.socket()
         self.SOCKET.connect((self.HOST, self.PORT))
         self.LISTENTHREAD.start()
-        self.PACKETS.senddata(self, 0x02)
+        self.ROBOCLASS.PACKETS.send(0x02)
 
     def stop(self):
-        self.STOPPING = True
+        self.ROBOCLASS.STOPPING = True
         self.LISTENTHREAD.join()
+        if not self.SERVER_DISCONNECT:
+            self.ROBOCLASS.PACKETS.send(0xFF)
+        self.SOCKET.close()
 
-    def socketsend(self, data):
-        if not self.STOPPING:
-            if self.ENCRYPTION_ENABLED:
-                data = self.AESCIPHERENC.encrypt(data)
+    def send(self, data):
+        if not self.ROBOCLASS.STOPPING:
+            if self.ROBOCLASS.ENCRYPTION.ENCRYPTION_ENABLED:
+                data = self.ROBOCLASS.ENCRYPTION.AESencrypt(data)
             self.SOCKET.send(data)
 
-    def socketreceive(self, data):
-        if self.ENCRYPTION_ENABLED:
-            data = self.AESCIPHERDEC.decrypt(data)
+    def receive(self, data):
+        if self.ROBOCLASS.ENCRYPTION.ENCRYPTION_ENABLED:
+            data = self.ROBOCLASS.ENCRYPTION.AESdecrypt(data)
             print("Decrpyted data!")
-        self.PACKETS.processdata(self, data)
+        self.ROBOCLASS.PACKETS.process(data)
 
     def listen(self):
         while True:
-            if self.STOPPING:
+            if self.ROBOCLASS.STOPPING:
                 break
             else:
                 receivebytes = self.SOCKET.recv(4096)
                 if len(receivebytes) == 0:
                     time.sleep(0.1)
                 else:
-                    self.socketreceive(receivebytes)
+                    self.receive(receivebytes)

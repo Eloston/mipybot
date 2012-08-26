@@ -1,6 +1,4 @@
 from . import template
-import struct
-from Crypto.PublicKey import RSA
 
 class handler(template.handler):
     def __init__(self):
@@ -8,27 +6,32 @@ class handler(template.handler):
         self.HEADER = 0xFD
 
     def receive(self, roboclass, data):
-        Position = roboclass.SHORT_LENGTH # ServerID short
-        serverid_length = struct.unpack('!h', data[:roboclass.SHORT_LENGTH])[0] * 2 # Server ID is a UTF-16be string
-        serverid = data[Position:Position+serverid_length].decode(roboclass.STRING_ENCODE)
+        serverid_length = roboclass.CONVERTER.getstringdata(data)["length"]
+        serverid = roboclass.CONVERTER.getstringdata(data)["string"]
+        Position = roboclass.CONVERTER.SHORT_LENGTH # ServerID short
         Position += serverid_length
-        publickey_length = struct.unpack('!h', data[Position:Position+roboclass.SHORT_LENGTH])[0]
-        Position += roboclass.SHORT_LENGTH
-        publickey = data[Position:Position+publickey_length]
-        publickey = RSA.importKey(publickey) # Decode into ASN.1 defined by X.509
+
+        publickey_length = roboclass.CONVERTER.getshortdata(data, Position)["length"]
+        publickey = roboclass.CONVERTER.getshortdata(data, Position)["data"]
+        Position += roboclass.CONVERTER.SHORT_LENGTH
         Position += publickey_length
-        token_length = struct.unpack("!h", data[Position:Position+roboclass.SHORT_LENGTH])[0]
-        Position += roboclass.SHORT_LENGTH
-        token = data[Position:Position+token_length]
+
+        token_length = roboclass.CONVERTER.getshortdata(data, Position)["length"]
+        token = roboclass.CONVERTER.getshortdata(data, Position)["data"]
+        Position += roboclass.CONVERTER.SHORT_LENGTH
         Position += token_length
-        roboclass.ENCRYPTIONREQUESTLIST = [serverid, publickey, token]
-        roboclass.PACKETS.senddata(roboclass, 0xFC)
+
+        roboclass.ENCRYPTION.makePKCSCIPHER(publickey)
+        roboclass.ENCRYPTION.SERVERID = serverid
+        roboclass.ENCRYPTION.VERIFICATIONTOKEN = token
+
+        roboclass.PACKETS.send(0xFC)
 
     def getlength(self, roboclass, data):
-        Length = roboclass.SHORT_LENGTH # Header + the server ID short
-        Length += struct.unpack('!h', data[:roboclass.SHORT_LENGTH])[0] * 2 # Length of the server ID
-        Length += struct.unpack('!h', data[Length:Length+roboclass.SHORT_LENGTH])[0] # Length of the public key
-        Length += roboclass.SHORT_LENGTH # Length of the public key short
-        Length += struct.unpack('!h', data[Length:Length+roboclass.SHORT_LENGTH])[0] # Length of the verification token
-        Length += roboclass.SHORT_LENGTH # Length of the verification token short
+        Length = roboclass.CONVERTER.SHORT_LENGTH # Server ID short
+        Length += roboclass.CONVERTER.getstringdata(data)["length"] # Length of the server ID
+        Length += roboclass.CONVERTER.getshort(data, Length) # Length of the public key
+        Length += roboclass.CONVERTER.SHORT_LENGTH # Length of the public key short
+        Length += roboclass.CONVERTER.getshort(data, Length) # Length of the verification token
+        Length += roboclass.CONVERTER.SHORT_LENGTH # Length of the verification token short
         return Length

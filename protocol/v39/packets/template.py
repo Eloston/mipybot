@@ -13,6 +13,7 @@ class handler():
     def getlength(self, roboclass, data):
         # This function will get the length of every byte of a Minecraft packet. This doesn't include the header.
         # Make sure the final length is returned.
+        # All packet handlers must at least this implemented if it is designed to be received by the client
         print("Getting length not implemented in", self.NAME)
         print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
         print("Data:", data)
