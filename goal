@@ -21,3 +21,10 @@ MiPyBot goals
     -Each script will be a separate file.
     -Each script can be loaded and unloaded at any time, unless by design it cannot.
     -There will be many functions that are relatively easy to learn and use in the scripting.
+
+-Position pointer for packet data.
+    -Combine getlength() and receive() together so it will be easier to modify and easier to manage and read
+    -Define a read() statement to read data
+        -Records position of data from the start
+        -Returns the data read
+        -Can take string types like "string" for a Minecraft string and "byte" for a Minecraft byte

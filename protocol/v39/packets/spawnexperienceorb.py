@@ -2,8 +2,8 @@ from . import template
 
 class handler(template.handler):
     def __init__(self, *args):
-        self.NAME = "Use Entity"
-        self.HEADER = 0x07
+        self.NAME = "Spawn Experience Orb"
+        self.HEADER = 0x1A
 
     def getlength(self, roboclass, data):
-        return 9
+        return 18

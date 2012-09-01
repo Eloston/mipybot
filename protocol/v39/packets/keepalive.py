@@ -11,6 +11,7 @@ class handler(template.handler):
 
     def receive(self, roboclass, data):
         self.KEEPALIVE = data
+        print("Keep Alive number:", roboclass.CONVERTER.getinteger(data))
         roboclass.PACKETS.send(0x00)
 
     def getlength(self, roboclass, data):

@@ -8,6 +8,7 @@ class converter():
         self.SHORT_LENGTH = 2 # The length of a short in bytes
         self.INTEGER_LENGTH = 4 # The length of a integer in bytes
         self.LONG_LENGTH = 8 # The length of a long (a long long) in bytes
+        self.DOUBLE_LENGTH = 8 # The length of a double in bytes
         self.FLOAT_LENGTH = 4 # The length of a float in bytes
         self.BYTE_LENGTH = 1 # The length of a byte
         self.STRING_ENCODE = "UTF-16be"
@@ -60,30 +61,55 @@ class converter():
         bytestring = string.encode(self.STRING_ENCODE)
         return shortlength + bytestring
 
-    def getbyte(self, data, offset=0):
+    def getbyte(self, data, offset=0, signed=False):
         '''
         Converts a byte into a Python integer
         '''
-        return data[offset]
+        if signed:
+            formatstring = 'b'
+        else:
+            formatstring = 'B'
+        return struct.unpack(formatstring, data[offset:offset+self.BYTE_LENGTH])[0]
 
-    def makebyte(self, value, signed=True):
+    def makebyte(self, value, signed=False):
         '''
         Converts a Python integer into a byte
         '''
         if signed:
-            formatstring = 'B'
-        else:
             formatstring = 'b'
+        else:
+            formatstring = 'B'
         return struct.pack(formatstring, value)
+
+    def getbool(self, data, offset=0):
+        '''
+        Converts a Minecraft boolean into a Python boolean
+        '''
+        byte = self.getbyte(data, offset)
+        if byte == 0x01:
+            return True
+        elif byte == 0x00:
+            return False
+        else:
+            return None
+
+    def makebool(self, value):
+        '''
+        Converts a Python boolean into a Minecraft boolean
+        '''
+        if value:
+            return self.makebyte(0x01)
+        else:
+            return self.makebyte(0x00)
 
     def getinteger(self, data, offset=0, signed=True):
         '''
         Returns a python integer from a Minecraft integer
         '''
         if signed:
-            formatstring = '!I'
-        else:
             formatstring = '!i'
+        else:
+            formatstring = '!I'
         return struct.unpack(formatstring, data[offset:offset+self.INTEGER_LENGTH])[0]
 
     def makeinteger(self, value, signed=True):
@@ -91,12 +117,22 @@ class converter():
         Returns a Minecraft integer from a python integer
         '''
         if signed:
-            formatstring = '!I'
-        else:
             formatstring = '!i'
+        else:
+            formatstring = '!I'
         return struct.pack(formatstring, value)
 
-    def getlong(self, data, offset=0, singed=True):
+    def getintegerdata(self, data, offset=0):
+        '''
+        Returns the dictionary of the integer value and the data following the integer.
+        Some packets in Minecraft have data where a integer determines the length of the data following.
+        '''
+        length = self.getinteger(data, offset)
+        offset += self.INTEGER_LENGTH
+        newdata = data[offset:offset+length]
+        return {"length": length, "data": newdata}
+
+    def getlong(self, data, offset=0, signed=True):
         '''
         Returns a Python integer from a Minecraft long
         '''
@@ -127,6 +163,18 @@ class converter():
         Returns a Minecraft float from a Python float
         '''
         return struct.pack('!f', value)
+
+    def getdouble(self, data, offset=0):
+        '''
+        Returns a Python float from a Minecraft double
+        '''
+        return struct.unpack('!d', data[offset:offset+self.DOUBLE_LENGTH])[0]
+
+    def makedouble(self, value):
+        '''
+        Returns a Minecraft double from a Python float
+        '''
+        return struct.pack('!d', value)
 
 class encryption():
     def __init__(self):
