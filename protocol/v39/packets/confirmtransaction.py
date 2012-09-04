@@ -5,5 +5,5 @@ class handler(template.handler):
         self.NAME = "Confirm Transaction"
         self.HEADER = 0x6A
 
-    def getlength(self, roboclass, data):
+    def receive(self, roboclass):
         return 4

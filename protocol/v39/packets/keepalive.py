@@ -7,12 +7,11 @@ class handler(template.handler):
         self.KEEPALIVE = None # Bytes object of the latest Keep Alive information from the server
 
     def send(self, roboclass):
-        return self.KEEPALIVE
+        return roboclass.CONVERTER.makeinteger(self.KEEPALIVE)
 
-    def receive(self, roboclass, data):
-        self.KEEPALIVE = data
-        print("Keep Alive number:", roboclass.CONVERTER.getinteger(data))
+    def receive(self, roboclass):
+        self.KEEPALIVE = roboclass.PACKETS.POINTER.read('int')
+        print("Keep Alive number:", self.KEEPALIVE)
         roboclass.PACKETS.send(0x00)
 
-    def getlength(self, roboclass, data):
-        return roboclass.CONVERTER.INTEGER_LENGTH # There's only an integer in the Keep Alive packet
+        return roboclass.PACKETS.POINTER.getposition()

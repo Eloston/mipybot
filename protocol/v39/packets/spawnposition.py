@@ -5,13 +5,11 @@ class handler(template.handler):
         self.NAME = "Spawn Position"
         self.HEADER = 0x06
 
-    def receive(self, roboclass, data):
-        Position = 0
-        X = roboclass.CONVERTER.getinteger(data, Position)
-        Position += roboclass.CONVERTER.INTEGER_LENGTH
-        Y = roboclass.CONVERTER.getinteger(data, Position)
-        Position += roboclass.CONVERTER.INTEGER_LENGTH
-        Z = roboclass.CONVERTER.getinteger(data, Position)
+    def receive(self, roboclass):
+        X = roboclass.PACKETS.POINTER.read('int')
+        Y = roboclass.PACKETS.POINTER.read('int')
+        Z = roboclass.PACKETS.POINTER.read('int')
+
         positiondict = dict()
         positiondict['x'] = X
         positiondict['y'] = Y
@@ -19,5 +17,4 @@ class handler(template.handler):
         roboclass.CHARACTER.updateposition(positiondict)
         print("Spawn position:\nX:", X, "\nY:", Y, "\nZ:", Z)
 
-    def getlength(self, roboclass, data):
-        return roboclass.CONVERTER.INTEGER_LENGTH*3
+        return roboclass.PACKETS.POINTER.getposition()

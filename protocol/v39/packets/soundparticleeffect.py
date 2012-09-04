@@ -5,5 +5,5 @@ class handler(template.handler):
         self.NAME = "Sound/Particle Effect"
         self.HEADER = 0x3D
 
-    def getlength(self, roboclass, data):
+    def receive(self, roboclass):
         return 17

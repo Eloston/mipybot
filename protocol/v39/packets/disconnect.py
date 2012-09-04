@@ -7,10 +7,8 @@ class handler(template.handler):
     def send(self, roboclass):
         return b'\x00\x00' # This is a short of zero, which means there is a zero length string following. Usually when we send this it's when the client wants to disconnect.
 
-    def receive(self, roboclass, data):
-        disconnectmessage = roboclass.CONVERTER.getstringdata(data)["string"]
+    def receive(self, roboclass):
+        disconnectmessage = roboclass.PACKETS.POINTER.read('string')
         print("Disconnect/Kick message:", disconnectmessage)
         roboclass.stop()
-
-    def getlength(self, roboclass, data):
-        return roboclass.CONVERTER.SHORT_LENGTH+roboclass.CONVERTER.getstringdata(data)["length"]
+        return roboclass.PACKETS.POINTER.getposition()

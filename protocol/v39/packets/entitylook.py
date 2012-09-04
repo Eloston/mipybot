@@ -5,5 +5,5 @@ class handler(template.handler):
         self.NAME = "Entity Look"
         self.HEADER = 0x20
 
-    def getlength(self, roboclass, data):
+    def receive(self, roboclass):
         return 6

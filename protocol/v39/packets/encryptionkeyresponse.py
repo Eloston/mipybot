@@ -14,15 +14,11 @@ class handler(template.handler):
 
         return aeskeyenc_length+aeskeyenc+tokenenc_length+tokenenc
 
-    def receive(self, roboclass, data):
-        # As of this protocol version, the packet we get here doesn't carry anything useful.
+    def receive(self, roboclass):
+        # As of this protocol version, the packet we get here doesn't carry anything useful. But to play safe we read the length anyways
+        roboclass.PACKETS.POINTER.read('short') # Shared Secret short
+        roboclass.PACKETS.POINTER.read('short') # Verification token short
         roboclass.ENCRYPTION.ENCRYPTION_ENABLED = True
         roboclass.PACKETS.send(0xCD)
-        
-    def getlength(self, roboclass, data):
-        # Note, since this function is only called when this is received from the server, there should be two zero shorts and zero length byte arrays, so the total packet size should be 5. But the server may return something bigger, so we'll play safe.
-        Length = roboclass.CONVERTER.getshort(data) # Length of the shared secret
-        Length += roboclass.CONVERTER.SHORT_LENGTH # Shared Secret short
-        Length += roboclass.CONVERTER.getshort(data, Length) # Length of the verification token
-        Length += roboclass.CONVERTER.SHORT_LENGTH # Verification token short
-        return Length
+
+        return roboclass.PACKETS.POINTER.getposition()

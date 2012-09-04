@@ -5,5 +5,5 @@ class handler(template.handler):
         self.NAME = "Block Change"
         self.HEADER = 0x35
 
-    def getlength(self, roboclass, data):
+    def receive(self, roboclass):
         return 12

@@ -5,5 +5,5 @@ class handler(template.handler):
         self.NAME = "Increment Statistic"
         self.HEADER = 0xC8
 
-    def getlength(self, roboclass, data):
+    def receive(self, roboclass):
         return 5

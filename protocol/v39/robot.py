@@ -1,5 +1,4 @@
 import socket
-import struct
 import threading
 import time
 from . import library
@@ -77,6 +76,7 @@ class network():
         self.MAXPLAYERS = None # Max players on server integer
         #self.SOCKETBUFFER = 2**25
         self.SOCKETBUFFER = 4096
+        self.PACKETDATA = bytes() # Holds packet data comming from the server.
 
     def start(self):
         self.ROBOCLASS.ENCRYPTION.generateAES()
@@ -98,6 +98,29 @@ class network():
                 data = self.ROBOCLASS.ENCRYPTION.AESencrypt(data)
             self.SOCKET.send(data)
 
+    def listen(self):
+        while True:
+            if self.ROBOCLASS.STOPPING:
+                break
+            else:
+                self.PACKETDATA = bytes()
+                self.receive()
+                self.ROBOCLASS.PACKETS.process()
+
+    def receive(self):
+        while True:
+            receivebytestemp = self.SOCKET.recv(self.SOCKETBUFFER)
+            if self.ROBOCLASS.ENCRYPTION.ENCRYPTION_ENABLED:
+                data = self.ROBOCLASS.ENCRYPTION.AESdecrypt(receivebytestemp)
+                print("Decrpyted data!")
+            else:
+                data = receivebytestemp
+            self.PACKETDATA += data
+            if len(receivebytestemp) == self.SOCKETBUFFER:
+                print("***WARNING: RECEIVED DATA LENGTH IS EQUIVALENT TO SOCKET RECEIVE BUFFER VALUE***")
+            else:
+                break
+    '''
     def receive(self, data):
         if self.ROBOCLASS.ENCRYPTION.ENCRYPTION_ENABLED:
             data = self.ROBOCLASS.ENCRYPTION.AESdecrypt(data)
@@ -121,3 +144,4 @@ class network():
                     time.sleep(0.001)
                 else:
                     self.receive(receivebytes)
+    '''

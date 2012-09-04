@@ -5,9 +5,12 @@ class handler(template.handler):
         self.NAME = "Spawn Painting"
         self.HEADER = 0x19
 
-    def getlength(self, roboclass, data):
-        Length = roboclass.CONVERTER.INTEGER_LENGTH
-        Length += roboclass.CONVERTER.getstringdata(data, Length)['length']
-        Length += roboclass.CONVERTER.SHORT_LENGTH
-        Length += roboclass.CONVERTER.INTEGER_LENGTH*4
-        return Length
+    def receive(self, roboclass):
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('string')
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('int')
+
+        return roboclass.PACKETS.POINTER.getposition()

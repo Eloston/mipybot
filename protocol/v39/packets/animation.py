@@ -5,5 +5,5 @@ class handler(template.handler):
         self.NAME = "Animation"
         self.HEADER = 0x12
 
-    def getlength(self, roboclass, data):
+    def receive(self, roboclass):
         return roboclass.CONVERTER.INTEGER_LENGTH + roboclass.CONVERTER.BYTE_LENGTH

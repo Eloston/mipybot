@@ -5,13 +5,9 @@ class handler(template.handler):
         self.NAME = "Plugin Message"
         self.HEADER = 0xFA
 
-    def receive(self, roboclass, data):
-        channel = roboclass.CONVERTER.getstringdata(data)['string']
+    def receive(self, roboclass):
+        channel = roboclass.PACKETS.POINTER.read('string')
         print("Plugin channel:", channel)
+        roboclass.PACKETS.POINTER.read('shortdata')
 
-    def getlength(self, roboclass, data):
-        Length = roboclass.CONVERTER.getstringdata(data)['length']
-        Length += roboclass.CONVERTER.SHORT_LENGTH
-        Length += roboclass.CONVERTER.getshort(data, Length)
-        Length += roboclass.CONVERTER.SHORT_LENGTH
-        return Length
+        return roboclass.PACKETS.POINTER.getposition()

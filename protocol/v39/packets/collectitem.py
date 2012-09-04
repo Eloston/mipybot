@@ -5,5 +5,7 @@ class handler(template.handler):
         self.NAME = "Collect Item"
         self.HEADER = 0x16
 
-    def getlength(self, roboclass, data):
-        return roboclass.CONVERTER.INTEGER_LENGTH*2
+    def receive(self, roboclass):
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('int')
+        return roboclass.PACKETS.POINTER.getposition()

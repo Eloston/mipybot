@@ -5,6 +5,8 @@ class handler(template.handler):
         self.NAME = "Destroy Entity"
         self.HEADER = 0x1D
 
-    def getlength(self, roboclass, data):
-        entitycount = roboclass.CONVERTER.getbyte(data)
-        return roboclass.CONVERTER.BYTE_LENGTH + roboclass.CONVERTER.INTEGER_LENGTH*entitycount
+    def receive(self, roboclass):
+        entitycount = roboclass.PACKETS.POINTER.read('byte')
+        for iteration in list(range(entitycount)):
+            roboclass.PACKETS.POINTER.read('int')
+        return roboclass.PACKETS.POINTER.getposition()

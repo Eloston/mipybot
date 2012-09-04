@@ -5,16 +5,17 @@ class handler(template.handler):
         self.NAME = "Respawn"
         self.HEADER = 0x09
 
-    def receive(self, roboclass, data):
-        dimension = roboclass.CONVERTER.getinteger(data)
-        Position += roboclass.CONVERTER.INTEGER_LENGTH
-        difficulty = roboclass.CONVERTER.getbyte(data, Position)
-        Position += roboclass.CONVERTER.BYTE_LENGTH
-        gamemode = roboclass.CONVERTER.getbyte(data, Position)
-        Position += roboclass.CONVERTER.BYTE_LENGTH
-        worldheight = roboclass.CONVERTER.getshort(data, Position)
-        Position += roboclass.CONVERTER.SHORT_LENGTH
-        leveltype = roboclass.CONVERTER.getstringdata(data, Position)['string']
+    def receive(self, roboclass):
+        dimension = roboclass.PACKETS.POINTER.read('int')
+
+        difficulty = roboclass.PACKETS.POINTER.read('byte')
+
+        gamemode = roboclass.PACKETS.POINTER.read('byte')
+
+        worldheight = roboclass.PACKETS.POINTER.read('short')
+
+        leveltype = roboclass.PACKETS.POINTER.read('string')
+
         worldinfodict = dict()
         worldinfodict['dimension'] = dimension
         worldinfodict['difficulty'] = difficulty
@@ -23,7 +24,4 @@ class handler(template.handler):
         worldinfodict['leveltype'] = leveltype
         roboclass.CHARACTER.updateworldinfo(worldinfodict)
 
-    def getlength(self, roboclass, data):
-        Length = roboclass.CONVERTER.INTEGER_LENGTH + roboclass.CONVERTER.BYTE_LENGTH + roboclass.CONVERTER.BYTE_LENGTH + roboclass.CONVERTER.SHORT_LENGTH
-        Length += roboclass.CONVERTER.getstringdata(data, Length)['length']
-        return Length
+        return roboclass.PACKETS.POINTER.getposition()

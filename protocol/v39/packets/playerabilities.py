@@ -5,5 +5,5 @@ class handler(template.handler):
         self.NAME = "Player Abilities"
         self.HEADER = 0xCA
 
-    def getlength(self, roboclass, data):
+    def receive(self, roboclass):
         return 3

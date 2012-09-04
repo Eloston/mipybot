@@ -5,5 +5,5 @@ class handler(template.handler):
         self.NAME = "Entity Teleport"
         self.HEADER = 0x22
 
-    def getlength(self, roboclass, data):
+    def receive(self, roboclass):
         return 18

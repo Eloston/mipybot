@@ -5,10 +5,15 @@ class handler(template.handler):
         self.NAME = "Spawn Object/Vehicle"
         self.HEADER = 0x17
 
-    def getlength(self, roboclass, data):
-        Length = roboclass.CONVERTER.INTEGER_LENGTH*4 + roboclass.CONVERTER.BYTE_LENGTH
-        objectdata = roboclass.CONVERTER.getinteger(data, Length)
-        Length += roboclass.CONVERTER.INTEGER_LENGTH
+    def receive(self, roboclass):
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('byte')
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('int')
+        objectdata = roboclass.PACKETS.POINTER.read('int')
         if objectdata > 0:
-            Length += roboclass.CONVERTER.SHORT_LENGTH*3
-        return Length
+            roboclass.PACKETS.POINTER.read('short')
+            roboclass.PACKETS.POINTER.read('short')
+            roboclass.PACKETS.POINTER.read('short')
+        return roboclass.PACKETS.POINTER.getposition()

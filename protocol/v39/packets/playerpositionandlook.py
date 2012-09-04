@@ -22,30 +22,22 @@ class handler(template.handler):
 
         return x + y + stance + z + yaw + pitch + onground
 
-    def receive(self, roboclass, data):
-        Position = 0
+    def receive(self, roboclass):
         positiondict = dict()
 
-        positiondict['x'] = roboclass.CONVERTER.getdouble(data, Position)
-        Position += roboclass.CONVERTER.DOUBLE_LENGTH
+        positiondict['x'] = roboclass.PACKETS.POINTER.read('double')
 
-        positiondict['stance'] = roboclass.CONVERTER.getdouble(data, Position)
-        Position += roboclass.CONVERTER.DOUBLE_LENGTH
+        positiondict['stance'] = roboclass.PACKETS.POINTER.read('double')
 
-        positiondict['y'] = roboclass.CONVERTER.getdouble(data, Position)
-        Position += roboclass.CONVERTER.DOUBLE_LENGTH
+        positiondict['y'] = roboclass.PACKETS.POINTER.read('double')
 
-        positiondict['z'] = roboclass.CONVERTER.getdouble(data, Position)
-        Position += roboclass.CONVERTER.DOUBLE_LENGTH
+        positiondict['z'] = roboclass.PACKETS.POINTER.read('double')
 
-        positiondict['yaw'] = roboclass.CONVERTER.getfloat(data, Position)
-        Position += roboclass.CONVERTER.FLOAT_LENGTH
+        positiondict['yaw'] = roboclass.PACKETS.POINTER.read('float')
 
-        positiondict['pitch'] = roboclass.CONVERTER.getfloat(data, Position)
-        Position += roboclass.CONVERTER.FLOAT_LENGTH
+        positiondict['pitch'] = roboclass.PACKETS.POINTER.read('float')
 
-        positiondict['onground'] = roboclass.CONVERTER.getbool(data, Position)
-        Position += roboclass.CONVERTER.BYTE_LENGTH
+        positiondict['onground'] = roboclass.PACKETS.POINTER.read('bool')
 
         roboclass.CHARACTER.updateposition(positiondict)
 
@@ -53,5 +45,4 @@ class handler(template.handler):
 
         roboclass.PACKETS.send(0x0D)
 
-    def getlength(self, roboclass, data):
-        return roboclass.CONVERTER.DOUBLE_LENGTH*4 + roboclass.CONVERTER.FLOAT_LENGTH*2 + roboclass.CONVERTER.BYTE_LENGTH
+        return roboclass.PACKETS.POINTER.getposition()

@@ -5,17 +5,8 @@ class handler(template.handler):
         self.NAME = "Set Slot"
         self.HEADER = 0x67
 
-    def getlength(self, roboclass, data):
-        Length = roboclass.CONVERTER.BYTE_LENGTH + roboclass.CONVERTER.SHORT_LENGTH
-        # Reading the slot
-        slotid = roboclass.CONVERTER.getshort(data, Length)
-        Length += roboclass.CONVERTER.SHORT_LENGTH
-        if slotid == -1:
-            return Length
-        Length += roboclass.CONVERTER.BYTE_LENGTH
-        slotdatalength = roboclass.CONVERTER.getshort(data, Length)
-        Length += roboclass.CONVERTER.SHORT_LENGTH
-        if slotdatalength == -1:
-            return Length
-        Length += slotdatalength
-        return Length
+    def receive(self, roboclass):
+        roboclass.PACKETS.POINTER.read('byte')
+        roboclass.PACKETS.POINTER.read('short')
+        roboclass.PACKETS.POINTER.read('slot')
+        return roboclass.PACKETS.POINTER.getposition()

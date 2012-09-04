@@ -5,5 +5,11 @@ class handler(template.handler):
         self.NAME = "Use Bed"
         self.HEADER = 0x11
 
-    def getlength(self, roboclass, data):
-        return roboclass.CONVERTER.INTEGER_LENGTH + roboclass.CONVERTER.BYTE_LENGTH + roboclass.CONVERTER.INTEGER_LENGTH + roboclass.CONVERTER.BYTE_LENGTH + roboclass.CONVERTER.INTEGER_LENGTH
+    def receive(self, roboclass):
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('byte')
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('byte')
+        roboclass.PACKETS.POINTER.read('int')
+
+        return roboclass.PACKETS.POINTER.getposition()

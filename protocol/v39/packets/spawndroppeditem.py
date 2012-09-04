@@ -5,5 +5,15 @@ class handler(template.handler):
         self.NAME = "Spawn Dropped Item"
         self.HEADER = 0x15
 
-    def getlength(self, roboclass, data):
-        return roboclass.CONVERTER.INTEGER_LENGTH*4 + roboclass.CONVERTER.SHORT_LENGTH*2 + roboclass.CONVERTER.BYTE_LENGTH*4
+    def receive(self, roboclass):
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('short')
+        roboclass.PACKETS.POINTER.read('short')
+        roboclass.PACKETS.POINTER.read('byte')
+        roboclass.PACKETS.POINTER.read('byte')
+        roboclass.PACKETS.POINTER.read('byte')
+        roboclass.PACKETS.POINTER.read('byte')
+        return roboclass.PACKETS.POINTER.getposition()

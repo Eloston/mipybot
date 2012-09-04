@@ -5,5 +5,5 @@ class handler(template.handler):
         self.NAME = "Spawn Experience Orb"
         self.HEADER = 0x1A
 
-    def getlength(self, roboclass, data):
+    def receive(self, roboclass):
         return 18

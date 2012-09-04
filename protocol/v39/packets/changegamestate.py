@@ -5,11 +5,9 @@ class handler(template.handler):
         self.NAME = "Change Game State"
         self.HEADER = 0x46
 
-    def receive(self, roboclass, data):
-        reason = roboclass.CONVERTER.getbyte(data)
-        Position = roboclass.CONVERTER.BYTE_LENGTH
-        gamemode = roboclass.CONVERTER.getbyte(data, Position)
-        Position += roboclass.CONVERTER.BYTE_LENGTH
+    def receive(self, roboclass):
+        reason = roboclass.PACKETS.POINTER.read('byte')
+        gamemode = roboclass.PACKETS.POINTER.read('byte')
         reasonstring = ''
         reasondict = dict()
         reasondict[0] = "Invalid Bed"
@@ -25,6 +23,4 @@ class handler(template.handler):
 
         roboclass.CHARACTER.updateworldinfo({'gamemode': gamemode})
         print("Gamemode is", gamemode)
-
-    def getlength(self, roboclass, data):
-        return 2
+        return roboclass.PACKETS.POINTER.getposition()

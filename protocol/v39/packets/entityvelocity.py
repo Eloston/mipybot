@@ -5,5 +5,5 @@ class handler(template.handler):
         self.NAME = "Entity Velocity"
         self.HEADER = 0x1C
 
-    def getlength(self, roboclass, data):
+    def receive(self, roboclass):
         return 10

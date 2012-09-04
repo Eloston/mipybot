@@ -5,8 +5,12 @@ class handler(template.handler):
         self.NAME = "Named Sound Effect"
         self.HEADER = 0x3E
 
-    def getlength(self, roboclass, data):
-        Length = 0
-        soundnamelength = roboclass.CONVERTER.getstringdata(data)['length']
-        Length += roboclass.CONVERTER.SHORT_LENGTH + soundnamelength + roboclass.CONVERTER.INTEGER_LENGTH*3 + roboclass.CONVERTER.FLOAT_LENGTH + roboclass.CONVERTER.BYTE_LENGTH
-        return Length
+    def receive(self, roboclass):
+        roboclass.PACKETS.POINTER.read('string')
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('float')
+        roboclass.PACKETS.POINTER.read('byte')
+
+        return roboclass.PACKETS.POINTER.getposition()

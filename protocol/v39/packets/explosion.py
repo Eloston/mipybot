@@ -5,8 +5,14 @@ class handler(template.handler):
         self.NAME = "Explosion"
         self.HEADER = 0x3C
 
-    def getlength(self, roboclass, data):
-        Length = roboclass.CONVERTER.DOUBLE_LENGTH*3 + roboclass.CONVERTER.FLOAT_LENGTH
-        recordcount = roboclass.CONVERTER.getinteger(data, Length)
-        Length += roboclass.CONVERTER.INTEGER_LENGTH + recordcount*3 + roboclass.CONVERTER.FLOAT_LENGTH*3
-        return Length
+    def receive(self, roboclass):
+        roboclass.PACKETS.POINTER.read('double')
+        roboclass.PACKETS.POINTER.read('double')
+        roboclass.PACKETS.POINTER.read('double')
+        roboclass.PACKETS.POINTER.read('float')
+        recordcount = roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read(recordcount*3)
+        roboclass.PACKETS.POINTER.read('float')
+        roboclass.PACKETS.POINTER.read('float')
+        roboclass.PACKETS.POINTER.read('float')
+        return roboclass.PACKETS.POINTER.getposition()

@@ -5,8 +5,9 @@ class handler(template.handler):
         self.NAME = "Multi Block Change"
         self.HEADER = 0x34
 
-    def getlength(self, roboclass, data):
-        Length = roboclass.CONVERTER.INTEGER_LENGTH*2 + roboclass.CONVERTER.SHORT_LENGTH
-        chunkdatasize = roboclass.CONVERTER.getintegerdata(data, Length)['length']
-        Length += roboclass.CONVERTER.INTEGER_LENGTH + chunkdatasize
-        return Length
+    def receive(self, roboclass):
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('int')
+        roboclass.PACKETS.POINTER.read('short')
+        roboclass.PACKETS.POINTER.read('integerdata')
+        return roboclass.PACKETS.POINTER.getposition()
