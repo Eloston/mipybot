@@ -72,6 +72,9 @@ class handlermanager():
             self.ROBOCLASS.NETWORK.PACKETDATA = self.ROBOCLASS.NETWORK.PACKETDATA[self.ROBOCLASS.CONVERTER.BYTE_LENGTH:] # Strip out packet header
             self.POINTER.initpointer()
             packetdatalength = handclass.receive(self.ROBOCLASS)
+            if len(self.ROBOCLASS.NETWORK.PACKETDATA) < packetdatalength:
+                print("***ERROR: PACKET DATA LENGTH EXCEEDED DATA SIZE***")
+                self.POINTER.checkbuffer(packetdatalength)
             self.ROBOCLASS.NETWORK.PACKETDATA = self.ROBOCLASS.NETWORK.PACKETDATA[packetdatalength:]
             if len(self.ROBOCLASS.NETWORK.PACKETDATA) == 0:
                 print("***INFO: Data hit length of 0")

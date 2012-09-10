@@ -11,6 +11,13 @@ MiPyBot goals
         -Each packet handler will have a send, process, and getlength functions.
         -Each packet handler will define which packet ID it deals with, so the packet processor will know which packet handler to send data to.
 
+-Position pointer for packet data.
+    -Combine getlength() and receive() together so it will be easier to modify and easier to manage and read
+    -Define a read() statement to read data
+        -Records position of data from the start
+        -Returns the data read
+        -Can take string types like "string" for a Minecraft string and "byte" for a Minecraft byte
+
 ***TODO***
 
 -Flexible user interface
@@ -22,9 +29,11 @@ MiPyBot goals
     -Each script can be loaded and unloaded at any time, unless by design it cannot.
     -There will be many functions that are relatively easy to learn and use in the scripting.
 
--Position pointer for packet data.
-    -Combine getlength() and receive() together so it will be easier to modify and easier to manage and read
-    -Define a read() statement to read data
-        -Records position of data from the start
-        -Returns the data read
-        -Can take string types like "string" for a Minecraft string and "byte" for a Minecraft byte
+-Signaling system
+    -Let anything anywhere in the code register a signal
+    -Have "signal spaces" which is like a namespace for signals
+    -Have a signal space for the robot to communicate with a user interface, and a signal space for a robot instance to communicate together
+
+-Store more information received from the server
+    -Store block and chunk data (Still don't know the format. All I know is that I need to store all chunk data and implement reading and writing functions in a class.)
+    -Store entity information (type, position, metadata, and special entities)
