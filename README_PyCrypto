@@ -1,0 +1,38 @@
+INFORMATION
+===========
+
+At the time of this writing, this robot uses PyCrypto v2.6
+
+PyCrypto website: https://www.dlitz.net/software/pycrypto/
+
+GETTING PYCRYPTO
+================
+
+***FOR LINUX USERS***
+
+On Debian and Debian-like distributions, you will most likely find PyCrypto for Python 3 in your distribution's repository (On Debian it has).
+
+Alternatively, you can build your own PyCrypto which is pretty easy and straight-forward
+
+***FOR WINDOWS USERS***
+
+You will probably not find the robot's specific version of PyCrypto for the robot's specific Python version from a 3rd party source easily, or at all. So following will be instructions on how to build PyCrypto on Windows and install it through different methods.
+
+Prerequisites:
+-Microsoft Visual Studio C++ 2008 Express (not tested with earlier or later versions. However, more advanced editions are more likely to work)
+    -If compiling a 64 bit edition, install the Windows 7 SDK (Which works for XP up) http://www.microsoft.com/en-us/download/details.aspx?id=3138
+-Python (It may have to be "registered" in the registry in order to work. The instructions will assume Python can be executed via executing "python" anywhere in CMD)
+
+1. Unpack the source code from the source archive from the PyCrypto website. These instructions will refer to the PyCrypto build directory as %PYCRYPTO_BUILD%
+2. Open a CMD window and follow these steps:
+    2a. Run the command: set VS90COMNTOOLS=%PATH_TO_VISUAL_STUDIO_INSTALL%\Common7\Tools\
+        (Where %PATH_TO_VISUAL_STUDIO_INSTALL% is the path to the Visual Studio install path, like C:\Program Files\Microsoft Visual Studio 9.0\
+    2b. Change your current working directory to %PATH_TO_VISUAL_STUDIO_INSTALL%\VC\bin (Use the cd command until you get there)
+    2c. In the new current working directory, run one of the following:
+        -vcvars32 for 32 bit
+        -vcvars64 for 64 bit on a 64 bit host
+        -vcvarsx86_amd64 for 64 bit cross compiling on a 32 bit host
+        -vcvarsx86_ia64 for Itanium x64 cross compiling on a 32 bit host
+    2d. Change your current working directory to %PYCRYPTO_BUILD%
+    2e. Run the command: python setup.py bdist_wininst
+3. An .exe installer should be created in %PYCRYPTO_BUILD%\dist which will install PyCrypto for your specific Python version.

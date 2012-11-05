@@ -1,0 +1,10 @@
+[Core]
+Name = 1.4.x
+Module = v47
+APIversion = 0.1
+
+[Documentation]
+Description = Built-in protocol
+Author = Eloston
+Version = 0.1
+Website = http://github.com/eloston/mipybot
