@@ -1,8 +1,15 @@
 MiPyBot
 (Pronounced: My Pie Bot)
-Minecraft Python Bot
+MInecraft PYthon roBOT
 ------------------------
 
-MiPyBot is a Minecraft (1.3, not the beta or alpha) bot written in Python 3
+MiPyBot is a Minecraft (1.4, not the beta or alpha) bot written in Python 3
 
 This project is licensed under the GNU GPL version 3. You can find a copy of the license in COPYING
+
+Yapsy:
+MiPyBot uses Yapsy for its plugin system.
+You can find the Yapsy license in yapsy_LICENSE
+Project page: http://sourceforge.net/projects/yapsy/
+Original source code: http://sourceforge.net/projects/yapsy/files/Yapsy-1.9.2/Yapsy-1.9.2-python3.tar.gz
+Documentation: http://yapsy.sourceforge.net/index.html
