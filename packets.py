@@ -1,8 +1,7 @@
-import logging
 import constants
-#import datatypes
 
 import struct
+import logging
 
 # *** DATA TYPES ***
 
@@ -27,6 +26,13 @@ class MCtypetemplate():
         else:
             tosend = struct.pack(self.UFORMAT, data)
         self.SENDBUFFER.add(tosend)
+
+class MCbytearray(MCtypetemplate):
+    def read(self, length):
+        return self.RECEIVEBUFFER.pop(length)
+
+    def write(self, *args):
+        raise Exception("Writing not defined for Byte Array format")
 
 class MCshort(MCtypetemplate):
     def __init__(self, roboclass):
@@ -256,7 +262,6 @@ class packet00(packet_template):
 
     def linksignals(self):
         self.ROBOCLASS.NETWORK.PACKETS.PACKETSIGNALS.getsignal(0x00).addreceiver(self.ROBOCLASS.NETWORK.PACKETS.send, {'packetid': 0x00})
-        self.ROBOCLASS.NETWORK.PACKETS.PACKETSIGNALS.getsignal(0x00).addreceiver(self.ROBOCLASS.NETWORK.PACKETS.send, {'packetid': 0x0A})
 
     def read(self):
         self.KEEPALIVEVALUE = MCint(self.ROBOCLASS).read()
@@ -277,6 +282,9 @@ class packet01(packet_template):
         self.ROBOCLASS.CHARACTER.DIFFICULTY = MCbyte(self.ROBOCLASS).read()
         MCbyte(self.ROBOCLASS).read()
         self.ROBOCLASS.WORLD.MAXPLAYERS = MCbyte(self.ROBOCLASS).read()
+
+    def linksignals(self):
+        self.ROBOCLASS.NETWORK.PACKETS.PACKETSIGNALS.getsignal(0x01).addreceiver(self.ROBOCLASS.CLOCKTHREAD.start)
 
 class packet02(packet_template):
     def variables(self):
@@ -337,6 +345,7 @@ class packet08(packet_template):
         self.ID = 0x08
 
     def read(self):
+        print("Got Health Update!")
         self.ROBOCLASS.CHARACTER.HEALTH = MCshort(self.ROBOCLASS).read()
         self.ROBOCLASS.CHARACTER.FOOD = MCshort(self.ROBOCLASS).read()
         self.ROBOCLASS.CHARACTER.FOODSATURATION = MCfloat(self.ROBOCLASS).read()
@@ -361,10 +370,20 @@ class packet0A(packet_template):
     def write(self):
         MCbool(self.ROBOCLASS).write(self.ROBOCLASS.CHARACTER.ONGROUND)
 
+    def linksignals(self):
+        self.ROBOCLASS.MAINSIGNALS.getsignal("clockupdate").addreceiver(self.ROBOCLASS.NETWORK.PACKETS.send, {'packetid': 0x0A})
+
 class packet0B(packet_template):
     def variables(self):
         self.NAME = "Player Position"
         self.ID = 0x0B
+
+    def write(self):
+        MCdouble(self.ROBOCLASS).write(self.ROBOCLASS.CHARACTER.X)
+        MCdouble(self.ROBOCLASS).write(self.ROBOCLASS.CHARACTER.Y)
+        MCdouble(self.ROBOCLASS).write(self.ROBOCLASS.CHARACTER.STANCE)
+        MCdouble(self.ROBOCLASS).write(self.ROBOCLASS.CHARACTER.Z)
+        MCbool(self.ROBOCLASS).write(self.ROBOCLASS.CHARACTER.ONGROUND)
 
 class packet0C(packet_template):
     def variables(self):
@@ -378,8 +397,8 @@ class packet0D(packet_template):
 
     def read(self):
         self.ROBOCLASS.CHARACTER.X = MCdouble(self.ROBOCLASS).read()
-        self.ROBOCLASS.CHARACTER.Y = MCdouble(self.ROBOCLASS).read()
         self.ROBOCLASS.CHARACTER.STANCE = MCdouble(self.ROBOCLASS).read()
+        self.ROBOCLASS.CHARACTER.Y = MCdouble(self.ROBOCLASS).read()
         self.ROBOCLASS.CHARACTER.Z = MCdouble(self.ROBOCLASS).read()
         self.ROBOCLASS.CHARACTER.YAW = MCfloat(self.ROBOCLASS).read()
         self.ROBOCLASS.CHARACTER.PITCH = MCfloat(self.ROBOCLASS).read()
@@ -411,6 +430,9 @@ class packet10(packet_template):
     def variables(self):
         self.NAME = "Held Item Change"
         self.ID = 0x10
+
+    def read(self):
+        MCshort(self.ROBOCLASS).read()
 
 class packet11(packet_template):
     def variables(self):
@@ -447,21 +469,6 @@ class packet14(packet_template):
         MCshort(self.ROBOCLASS).read()
         MCentitymetadata(self.ROBOCLASS).read()
 
-class packet15(packet_template):
-    def variables(self):
-        self.NAME = "Spawn Dropped Item"
-        self.ID = 0x15
-
-    def read(self):
-        MCint(self.ROBOCLASS).read()
-        MCslot(self.ROBOCLASS).read()
-        MCint(self.ROBOCLASS).read()
-        MCint(self.ROBOCLASS).read()
-        MCint(self.ROBOCLASS).read()
-        MCbyte(self.ROBOCLASS).read()
-        MCbyte(self.ROBOCLASS).read()
-        MCbyte(self.ROBOCLASS).read()
-
 class packet16(packet_template):
     def variables(self):
         self.NAME = "Collect Item"
@@ -482,6 +489,8 @@ class packet17(packet_template):
         MCint(self.ROBOCLASS).read()
         MCint(self.ROBOCLASS).read()
         MCint(self.ROBOCLASS).read()
+        MCbyte(self.ROBOCLASS).read()
+        MCbyte(self.ROBOCLASS).read()
         MCobjectdata(self.ROBOCLASS).read()
 
 class packet18(packet_template):
@@ -738,12 +747,14 @@ class packet38(packet_template):
 
     def read(self):
         count = MCshort(self.ROBOCLASS).read()
-        MCintdata(self.ROBOCLASS).read()
+        datalength = MCint(self.ROBOCLASS).read()
+        MCbool(self.ROBOCLASS).read()
+        MCbytearray(self.ROBOCLASS).read(datalength)
         for number in range(0, count):
             MCint(self.ROBOCLASS).read()
             MCint(self.ROBOCLASS).read()
-            MCshort(self.ROBOCLASS).read()
-            MCshort(self.ROBOCLASS).read()
+            MCshort(self.ROBOCLASS).read(False)
+            MCshort(self.ROBOCLASS).read(False)
 
 class packet3C(packet_template):
     def variables(self):
@@ -1022,9 +1033,13 @@ class packetFD(packet_template):
         self.ROBOCLASS.NETWORK.CONNECTION.ENCRYPTION.VERIFICATIONTOKEN = MCshortdata(self.ROBOCLASS).read()
 
     def linksignals(self):
-        self.ROBOCLASS.NETWORK.PACKETS.PACKETSIGNALS.getsignal(0xFD).addreceiver(self.ROBOCLASS.NETWORK.CONNECTION.ENCRYPTION.makePKCSCIPHER)
-        self.ROBOCLASS.NETWORK.PACKETS.PACKETSIGNALS.getsignal(0xFD).addreceiver(self.ROBOCLASS.NETWORK.CONNECTION.ENCRYPTION.generateAES)
-        self.ROBOCLASS.NETWORK.PACKETS.PACKETSIGNALS.getsignal(0xFD).addreceiver(self.ROBOCLASS.NETWORK.PACKETS.send, {'packetid': 0xFC})
+        if constants.EnableEncryption:
+            self.ROBOCLASS.NETWORK.PACKETS.PACKETSIGNALS.getsignal(0xFD).addreceiver(self.ROBOCLASS.NETWORK.CONNECTION.ENCRYPTION.makePKCSCIPHER)
+            self.ROBOCLASS.NETWORK.PACKETS.PACKETSIGNALS.getsignal(0xFD).addreceiver(self.ROBOCLASS.NETWORK.CONNECTION.ENCRYPTION.generateAES)
+            self.ROBOCLASS.NETWORK.PACKETS.PACKETSIGNALS.getsignal(0xFD).addreceiver(self.ROBOCLASS.NETWORK.PACKETS.send, {'packetid': 0xFC})
+        else:
+            print("Encryption is Disabled")
+            self.ROBOCLASS.NETWORK.PACKETS.PACKETSIGNALS.getsignal(0xFD).addreceiver(self.ROBOCLASS.NETWORK.PACKETS.send, {'packetid': 0xCD})
 
 class packetFE(packet_template):
     pass
@@ -1076,7 +1091,6 @@ class manager():
         self.PACKETHANDLERS[0x12] = packet12()
         self.PACKETHANDLERS[0x13] = packet13()
         self.PACKETHANDLERS[0x14] = packet14()
-        self.PACKETHANDLERS[0x15] = packet15()
         self.PACKETHANDLERS[0x16] = packet16()
         self.PACKETHANDLERS[0x17] = packet17()
         self.PACKETHANDLERS[0x18] = packet18()

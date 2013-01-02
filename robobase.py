@@ -1,13 +1,27 @@
 import internalib
 import network
+import pluginmanager
+
+import threading
+import time
 
 class main():
     def __init__(self):
+        self.HOST = '127.0.0.1'
+        self.PORT = 25565
+        self.USERNAME = 'MiPyBot'
+
+        self.STOPPING = False
+
         self.INTERNALIB = internalib
 
         self.LOGGINGTOOLS = internalib.loggingtools()
 
         self.MAINSIGNALS = internalib.signalmanager()
+
+        # Clock starts after robot logs in via 0x01
+        self.MAINSIGNALS.newsignal("clockupdate")
+        self.CLOCKTHREAD = threading.Thread(target=self.tickclock)
 
         self.MAINSIGNALS.newsignal("stop")
         self.MAINSIGNALS.getsignal("stop").addreceiver(self.stop)
@@ -19,16 +33,20 @@ class main():
 
         self.WORLD = world(self)
 
-        self.HOST = '127.0.0.1'
-        self.PORT = 25565
-        self.USERNAME = 'MiPyBot'
+        self.PLUGINMANAGER = pluginmanager.manager(self)
+        self.PLUGINMANAGER.initPlugins()
 
-        self.STOPPING = False
+    def tickclock(self):
+        while not self.STOPPING:
+            self.MAINSIGNALS.emit("clockupdate")
+            time.sleep(0.05)
 
     def start(self):
+        self.PLUGINMANAGER.startPlugins()
         self.NETWORK.start()
 
     def stop(self):
+        self.PLUGINMANAGER.stopPlugins()
         self.STOPPING = True
 
 class character():
