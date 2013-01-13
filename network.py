@@ -130,12 +130,19 @@ class network():
         self.PACKETS = packets.manager()
         self.PACKETS.load(roboclass)
         self.LISTENTHREAD = threading.Thread(target=self.listenthread)
+        self.SENDTHREAD = threading.Thread(target=self.sendthread)
+        self.SENDTHREAD.daemon = True
 
     def start(self):
         self.CONNECTION.start()
         self.PACKETS.start()
         self.LISTENTHREAD.start()
+        self.SENDTHREAD.start()
 
     def listenthread(self):
         while not self.ROBOCLASS.STOPPING:
-            self.PACKETS.read()
+            self.PACKETS.read_iteration()
+
+    def sendthread(self):
+        while not self.ROBOCLASS.STOPPING:
+            self.PACKETS.send_iteration()

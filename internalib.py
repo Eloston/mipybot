@@ -1,13 +1,13 @@
-import threading
 import logging
 import sys
+import queue
+import collections
 
 # Signaling definitions
 
 class signalmanager():
     def __init__(self):
-        self.SIGNALS = {}
-        self.EMITTINGTHREADS = set()
+        self.SIGNALS = dict()
 
     def getsignal(self, signame):
         return self.SIGNALS[signame]
@@ -23,43 +23,50 @@ class signalmanager():
     def delsignal(self, signame):
         del self.SIGNALS[signame]
 
-    def emit(self, signame, separateThread=False):
+    def emit(self, signame):
         emittingsignal = self.SIGNALS[signame]
-        if separateThread:
-            emitthread = threading.Thread(target=emittingsignal.emit)
-            emitthread.start()
-            self.EMITTINGTHREADS.add(emitthread)
-            self.cleardeadthreads()
-        else:
-            emittingsignal.emit()
-
-    def cleardeadthreads(self):
-        while True:
-            asignal = self.EMITTINGTHREADS.pop()
-            if asignal.is_alive():
-                self.EMITTINGTHREADS.add(asignal)
-                del asignal
-            else:
-                del asignal
-                break
+        emittingsignal.emit()
 
 class signal():
     def __init__(self, name):
         self.NAME = name
         self.RECEIVERS = []
+        self.RECEIVER_PROCESSING = queue.Queue()
+        self.ISLOCKED = False
+
+    def flushqueue(self):
+        while not self.RECEIVER_PROCESSING.empty():
+            actionlist = self.RECEIVER_PROCESSING.get()
+            if actionlist[0] == 'add':
+                self.addreceiver(actionlist[1], actionlist[2])
+            elif actionlist[0] == 'del':
+                self.delreceiver(actionlist[1], actionlist[2])
 
     def addreceiver(self, receiver, keywordargs=dict()):
-        self.RECEIVERS.append([receiver, keywordargs])
+        if self.ISLOCKED:
+            self.RECEIVER_PROCESSING.put(['add', receiver, keywordargs])
+        else:
+            self.RECEIVERS.append([receiver, keywordargs])
 
     def delreceiver(self, receiver, keywordargs=dict()):
-        for receiverlist in self.RECEIVERS:
-            if receiverlist[0] == receiver and receiverlist[1] == keywordargs:
-                self.RECEIVERS.remove(receiverlist)
-                break
+        if self.ISLOCKED:
+            self.RECEIVER_PROCESSING.put(['del', receiver, keywordargs])
+        else:
+            self.ISLOCKED = True
+            for receiverlist in self.RECEIVERS:
+                if receiverlist[0] == receiver and receiverlist[1] == keywordargs:
+                    self.RECEIVERS.remove(receiverlist)
+                    break
+            self.ISLOCKED = False
+            self.flushqueue()
 
     def emit(self):
-        for receiverlist in self.RECEIVERS:
-            receiverlist[0](**receiverlist[1])
+        if not self.ISLOCKED:
+            self.ISLOCKED = True
+            for receiverlist in self.RECEIVERS:
+                receiverlist[0](**receiverlist[1])
+            self.ISLOCKED = False
+            self.flushqueue()
 
 class loggingtools():
     def __init__(self):

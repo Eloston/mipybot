@@ -2,6 +2,7 @@ import constants
 
 import struct
 import logging
+import queue
 
 # *** DATA TYPES ***
 
@@ -1064,8 +1065,7 @@ class manager():
         self.PACKETSIGNALS.newsignal("start")
         self.PACKETSIGNALS.getsignal("start").addreceiver(self.send, {'packetid': 0x02})
 
-        self.SENDLISTQUE = list()
-        self.ISSENDING = False
+        self.SENDLISTQUEUE = queue.Queue()
 
         self.LOGGER = roboclass.LOGGINGTOOLS.makelogger("Network.Packets")
 
@@ -1152,7 +1152,7 @@ class manager():
     def start(self):
         self.PACKETSIGNALS.emit("start")
 
-    def read(self):
+    def read_iteration(self):
         packetid = MCbyte(self.ROBOCLASS).read(False)
         #self.LOGGER.info("Got packet "+hex(packetid))
         #print("Got packet", hex(packetid))
@@ -1163,15 +1163,13 @@ class manager():
             self.ROBOCLASS.MAINSIGNALS.emit('stop')
         self.PACKETSIGNALS.emit(packetid)
 
+    def send_iteration(self):
+        header = self.SENDLISTQUEUE.get()
+        MCbyte(self.ROBOCLASS).write(header, False)
+        self.PACKETHANDLERS[header].write()
+        self.ROBOCLASS.NETWORK.SENDBUFFER.flush()
+
     def send(self, packetid):
+        self.SENDLISTQUEUE.put(packetid)
         #self.LOGGER.info("Sending packet "+hex(packetid))
         #print("Sending packet", hex(packetid))
-        self.SENDLISTQUE.append(packetid)
-        if not self.ISSENDING:
-            self.ISSENDING = True
-            for header in self.SENDLISTQUE:
-                MCbyte(self.ROBOCLASS).write(header, False)
-                self.PACKETHANDLERS[header].write()
-                self.ROBOCLASS.NETWORK.SENDBUFFER.flush()
-                self.SENDLISTQUE = self.SENDLISTQUE[1:]
-            self.ISSENDING = False
