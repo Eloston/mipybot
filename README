@@ -3,14 +3,10 @@ MiPyBot
 MInecraft PYthon roBOT
 ------------------------
 
-MiPyBot is a Minecraft bot written in Python 3
+MiPyBot is a Minecraft robot written in Python 3.4
 
-Currently supported Minecraft version: 1.4.6
+MiPyBot will support Minecraft 1.7 (or 1.8 depending on development rate) in the future.
+
+There are also plans to support Minecraft Pocket Edition.
 
 This project is licensed under the GNU GPL version 3. You can find a copy of the license in COPYING
-
-Yapsy:
-MiPyBot uses Yapsy for its plugin system (version 1.10)
-You can find the Yapsy license in yapsy_LICENSE
-Project page: http://sourceforge.net/projects/yapsy/
-Documentation: http://yapsy.sourceforge.net/index.html

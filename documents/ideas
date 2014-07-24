@@ -1,0 +1,29 @@
+Player (through Player Manager)
+    -Head state
+    -Position state
+    -Health/Hunger state
+    -Armor state
+    -Inventory state
+    -Move arms
+    -Move body
+    -Move head
+Windows (through Window Manager)
+    -Inventory, chest, crafting table, furnace, etc.
+World (through World Manager)
+    -Chunk data
+        -Block data
+    -Entities
+        -Position
+        -State
+        -Includes player
+    -World Dimension
+    -Game Mode
+Chat (through Chat Manager)
+    -Send/receive chat messages
+User scripts (through Script Manager)
+    -Hook into managers
+    -Hook into some sort of clock
+Convenience functions for scripts
+Mojang authentication
+Support PC and PE protocols
+Multiple instances via arguments
