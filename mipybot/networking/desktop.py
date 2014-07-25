@@ -18,6 +18,7 @@ import io
 import struct
 import json
 import enum
+import uuid
 import Crypto.Random
 from Crypto.Cipher import AES, PKCS1_v1_5
 from Crypto.PublicKey import RSA
@@ -31,99 +32,107 @@ class Message:
 
     # Struct convenience methods
 
-    def _read(self, struct_format, length):
+    def _struct_read(self, struct_format, length):
         return struct.unpack(struct_format, self.buffer.read(length))[0]
 
-    def _write(self, struct_format, value):
+    def _struct_write(self, struct_format, value):
         self.buffer.write(struct.pack(struct_format, value))
 
     # bool
 
     def _read_bool(self):
-        return self._read("?", 1)
+        return self._struct_read("?", 1)
 
     def _write_bool(self, value):
-        self._write("?", value)
+        self._struct_write("?", value)
 
     # byte
 
     def _read_byte(self):
-        return self._read("b", 1)
+        return self._struct_read("b", 1)
 
     def _write_byte(self, value):
-        self._write("b", value)
+        self._struct_write("b", value)
 
     # ubyte
 
     def _read_ubyte(self):
-        return self._read("B", 1)
+        return self._struct_read("B", 1)
 
     def _write_ubyte(self, value):
-        self._write("B", value)
+        self._struct_write("B", value)
 
     # short
 
     def _read_short(self):
-        return self._read("!h", 2)
+        return self._struct_read("!h", 2)
 
     def _write_short(self, value):
-        self._write("!h", value)
+        self._struct_write("!h", value)
 
     # ushort
 
     def _read_ushort(self):
-        return self._read("!H", 2)
+        return self._struct_read("!H", 2)
 
     def _write_ushort(self, value):
-        self._write("!H", value)
+        self._struct_write("!H", value)
 
     # int
 
     def _read_int(self):
-        return self._read("!i", 4)
+        return self._struct_read("!i", 4)
 
     def _write_int(self, value):
-        self._write("!i", value)
+        self._struct_write("!i", value)
 
     # uint
 
     def _read_uint(self):
-        return self._read("!I", 4)
+        return self._struct_read("!I", 4)
 
     def _write_uint(self, value):
-        self._write("!I", value)
+        self._struct_write("!I", value)
 
     # long
 
     def _read_long(self):
-        return self._read("!q", 8)
+        return self._struct_read("!q", 8)
 
     def _write_long(self, value):
-        self._write("!q", value)
+        self._struct_write("!q", value)
 
     # ulong
 
     def _read_ulong(self):
-        return self._read("!Q", 8)
+        return self._struct_read("!Q", 8)
 
     def _write_ulong(self, value):
-        self._write("!Q", value)
+        self._struct_write("!Q", value)
 
     # float
 
     def _read_float(self):
-        return self._read("!f", 4)
+        return self._struct_read("!f", 4)
 
     def _write_float(self, value):
-        self._write("!f", value)
+        self._struct_write("!f", value)
 
     # double
 
     def _read_double(self):
-        return self._read("!d", 8)
+        return self._struct_read("!d", 8)
 
     def _write_double(self, value):
-        self._write("!d", value)
+        self._struct_write("!d", value)
+
+    # 128-bit integer
+
+    def _read_128int(self):
+        return uuid.UUID(bytes=self.buffer.read(16)).int
+
+    def _write_128int(self, value):
+        self.buffer.write(uuid.UUID(int=value).bytes)
 
     # varint
 
@@ -215,13 +224,12 @@ class Message:
 
 class Disconnect(Message):
     def parse(self):
-        print("Received disconnect: " + self._read_json()["text"])
+        print("Received disconnect: " + self._read_json())
 
 # Handshake Messages
 
 class Handshake(Message):
     def write(self):
-        print("Send Handshake")
         self._write_varint(5) # 1.7.6 through 1.7.10
         if mipybot.networking.NetworkManager.host_spoof is None:
             self._write_string(mipybot.networking.NetworkManager.host)
@@ -237,7 +245,6 @@ class Handshake(Message):
 
 class EncryptionRequest(Message):
     def parse(self):
-        print("Read Encryption Request")
         self._read_string() # Server ID
         encoded_public_key_len = self._read_short()
         Encryption.set_encoded_public_key(self.buffer.read(encoded_public_key_len))
@@ -249,20 +256,16 @@ class EncryptionRequest(Message):
 
 class LoginSuccess(Message):
     def parse(self):
-        print("Read Login Success")
         print("UUID: " + self._read_string())
         print("Username: " + self._read_string())
         Protocol.set_current_state(NetworkState.play)
-        print("Now Play state")
 
 class LoginStart(Message):
     def write(self):
-        print("Send Login Start")
         self._write_string(mipybot.player.PlayerManager.player_name)
 
 class EncryptionResponse(Message):
     def write(self):
-        print("Send Encryption Response")
         encrypted_aes_key = Encryption.pkcs_encrypt(Encryption.aes_key)
         self._write_short(len(encrypted_aes_key))
         self.buffer.write(encrypted_aes_key)
@@ -270,6 +273,580 @@ class EncryptionResponse(Message):
         self._write_short(len(encrypted_verification_token))
         self.buffer.write(encrypted_verification_token)
         Encryption.enable_encryption()
+
+# Play Messages
+
+class KeepAlive(Message):
+    def parse(self):
+        Protocol.send_message(0x00, self._read_int())
+
+    def write(self, keep_alive_id):
+        self._write_int(keep_alive_id)
+
+class JoinGame(Message):
+    def parse(self):
+        self._read_int() # Player Entity ID
+        self._read_ubyte() # Gamemode
+        self._read_byte() # Dimension
+        self._read_ubyte() # Difficulty
+        self._read_ubyte() # Max players, for drawing player list
+        self._read_string() # Level type
+
+class ChatMessage(Message):
+    def parse(self):
+        print("Chat: " + self._read_json())
+
+    def write(self, message):
+        self._write_string(message)
+
+class TimeUpdate(Message):
+    def parse(self):
+        self._read_long() # Age of the world
+        self._read_long() # Time of the day
+
+class EntityEquipment(Message):
+    def parse(self):
+        self._read_int() # Entity ID
+        self._read_short() # Equipment slot ID
+        self._read_slot() # Equipment item
+
+class SpawnPosition(Message):
+    def parse(self):
+        self._read_int() # Spawn x
+        self._read_int() # Spawn y
+        self._read_int() # Spawn z
+
+class UpdateHealth(Message):
+    def parse(self):
+        self._read_float() # Health
+        self._read_short() # Food
+        self._read_float() # Food saturation
+
+class Respawn(Message):
+    def parse(self):
+        self._read_int() # Dimension
+        self._read_ubyte() # Difficulty
+        self._read_ubyte() # Gamemode
+        self._read_string() # Level type
+
+class PlayerPositionAndLook(Message):
+    def parse(self):
+        self._read_double() # Absolute X
+        self._read_double() # Absolute Y of player eyes
+        self._read_double() # Absolute Z
+        self._read_float() # Yaw in degrees
+        self._read_float() # Pitch in degrees
+        self._read_bool() # On Ground
+
+    def write(self):
+        raise NotImplementedError()
+
+class HeldItemChange(Message):
+    def parse(self):
+        self._read_byte() # Selected slot index
+
+    def write(self):
+        raise NotImplementedError()
+
+class UseBed(Message):
+    def parse(self):
+        self._read_int() # Player entity ID
+        self._read_int() # Bed head-board X
+        self._read_ubyte() # Bed head-board Y
+        self._read_int() # Bed head-board Z
+
+class Animation(Message):
+    def parse(self):
+        self._read_varint() # Player entity ID
+        self._read_ubyte() # Animation ID
+
+    def write(self):
+        raise NotImplementedError()
+
+class SpawnPlayer(Message):
+    def parse(self):
+        self._read_varint() # Player entity ID
+        self._read_string() # Player UUID
+        self._read_string() # Player name
+        data_count = self._read_varint()
+        for i in range(data_count):
+            self._read_string() # Name of property
+            self._read_string() # Value of property
+            self._read_string() # Signature of property
+        self._read_int() # Player X as fixed-point number
+        self._read_int() # Player Y as fixed-point number
+        self._read_int() # Player Z as fixed-point number
+        self._read_byte() # Player Yaw
+        self._read_byte() # Player pitch
+        self._read_short() # Current holding item
+        self._read_metadata()
+
+class CollectItem(Message):
+    def parse(self):
+        self._read_int() # Collected entity ID
+        self._read_int() # Collector entity ID
+
+class SpawnObject(Message):
+    def parse(self):
+        self._read_varint() # Entity ID
+        self._read_byte() # Type of object
+        self._read_int() # X as fixed-point number
+        self._read_int() # Y as fixed-point number
+        self._read_int() # Z as fixed-point number
+        self._read_byte() # Pitch
+        self._read_byte() # Yaw
+        object_type = self._read_int()
+        if object_type > 0:
+            self._read_short() # Speed X
+            self._read_short() # Speed Y
+            self._read_short() # Speed Z
+
+class SpawnMob(Message):
+    def parse(self):
+        self._read_varint() # Entity ID
+        self._read_ubyte() # Type of mob
+        self._read_int() # X as fixed-point number
+        self._read_int() # Y as fixed-point number
+        self._read_int() # Z as fixed-point number
+        self._read_byte() # Yaw
+        self._read_byte() # Pitch
+        self._read_byte() # Head Pitch
+        self._read_short() # Velocity X
+        self._read_short() # Velocity Y
+        self._read_short() # Velocity Z
+        self._read_metadata()
+
+class SpawnPainting(Message):
+    def parse(self):
+        self._read_varint() # Entity ID
+        self._read_string() # Name of painting
+        self._read_int() # Center X
+        self._read_int() # Center Y
+        self._read_int() # Center Z
+        self._read_int() # Direction
+
+class SpawnExperienceOrb(Message):
+    def parse(self):
+        self._read_varint() # Entity ID
+        self._read_int() # X as fixed-point number
+        self._read_int() # Y as fixed-point number
+        self._read_int() # Z as fixed-point number
+        self._read_short() # Count
+
+class EntityVelocity(Message):
+    def parse(self):
+        self._read_int() # Entity ID
+        self._read_short() # Velocity X
+        self._read_short() # Velocity Y
+        self._read_short() # Velocity Z
+
+class DestroyEntities(Message):
+    def parse(self):
+        entity_count = self._read_byte()
+        for i in range(entity_count):
+            self._read_int() # Entity ID
+
+class Entity(Message):
+    def parse(self):
+        self._read_int() # Entity ID
+
+class EntityRelativeMove(Message):
+    def parse(self):
+        self._read_int() # Entity ID
+        self._read_byte() # delta X as fixed-point number
+        self._read_byte() # delta Y as fixed-point number
+        self._read_byte() # delta Z as fixed-point number
+
+class EntityLook(Message):
+    def parse(self):
+        self._read_int() # Entity ID
+        self._read_byte() # Yaw fraction
+        self._read_byte() # Pitch fraction
+
+class EntityLookAndRelativeMove(Message):
+    def parse(self):
+        self._read_int() # Entity ID
+        self._read_byte() # delta X as fixed-point number
+        self._read_byte() # delta Y as fixed-point number
+        self._read_byte() # delta Z as fixed-point number
+        self._read_byte() # Yaw fraction
+        self._read_byte() # Pitch fraction
+
+class EntityTeleport(Message):
+    def parse(self):
+        self._read_int() # Entity ID
+        self._read_int() # X as fixed-point number
+        self._read_int() # Y as fixed-point number
+        self._read_int() # Z as fixed-point number
+        self._read_byte() # Yaw fraction
+        self._read_byte() # Pitch fraction
+
+class EntityHeadLook(Message):
+    def parse(self):
+        self._read_int() # Entity ID
+        self._read_byte() # Yaw
+
+class EntityStatus(Message):
+    def parse(self):
+        self._read_int() # Entity ID
+        self._read_byte() # Entity status
+
+class AttachEntity(Message):
+    def parse(self):
+        self._read_int() # Entity ID
+        self._read_int() # Vehicle Entity ID
+        self._read_bool() # Whether to leash entity to vehicle
+
+class EntityMetadata(Message):
+    def parse(self):
+        self._read_int() # Entity ID
+        self._read_metadata()
+
+class EntityEffect(Message):
+    def parse(self):
+        self._read_int() # Entity ID
+        self._read_byte() # Effect ID
+        self._read_byte() # Amplifier
+        self._read_short() # Duration
+
+class RemoveEntityEffect(Message):
+    def parse(self):
+        self._read_int() # Entity ID
+        self._read_byte() # Effect ID
+
+class SetExperience(Message):
+    def parse(self):
+        self._read_float() # Experience bar
+        self._read_short() # Level
+        self._read_short() # Total experience
+
+class EntityProperties(Message):
+    def parse(self):
+        self._read_int() # Entity ID
+        property_count = self._read_int()
+        for i in range(property_count):
+            self._read_string() # Key
+            self._read_double() # Value
+            modifier_count = self._read_short()
+            for j in range(modifier_count):
+                self._read_128int() # UUID
+                self._read_double() # Amount
+                self._read_byte() # Operation
+
+class ChunkData(Message):
+    def parse(self):
+        self._read_int() # Chunk X coordinate
+        self._read_int() # Chunk Z coordinate
+        self._read_bool() # Ground-up continuous
+        self._read_ushort() # Primary bit map
+        self._read_ushort() # Add bit map
+        chunk_data_length = self._read_int()
+        self.buffer.read(chunk_data_length)
+
+class MultiBlockChange(Message):
+    def parse(self):
+        self._read_int() # Chunk X coordinate
+        self._read_int() # Chunk Z coordinate
+        self._read_short() # number of blocks affected
+        record_size = self._read_int()
+        self.buffer.read(record_size)
+
+class BlockChange(Message):
+    def parse(self):
+        self._read_int() # Block X coordinate
+        self._read_ubyte() # Block Y coordinate
+        self._read_int() # Block Z coordinate
+        self._read_varint() # Block ID
+        self._read_ubyte() # Block metadata
+
+class BlockAction(Message):
+    def parse(self):
+        self._read_int() # Block X
+        self._read_short() # Block Y
+        self._read_int() # block Z
+        self._read_ubyte()
+        self._read_ubyte()
+        self._read_varint()
+
+class BlockBreakAnimation(Message):
+    def parse(self):
+        self._read_varint()
+        self._read_int()
+        self._read_int()
+        self._read_int()
+        self._read_byte()
+
+class MapChunkBulk(Message):
+    def parse(self):
+        chunk_count = self._read_short()
+        data_length = self._read_int()
+        self._read_bool()
+        self.buffer.read(data_length)
+        for i in range(chunk_count):
+            self._read_int()
+            self._read_int()
+            self._read_ushort()
+            self._read_ushort()
+
+class Explosion(Message):
+    def parse(self):
+        self._read_float()
+        self._read_float()
+        self._read_float()
+        self._read_float()
+        record_count = self._read_int()
+        for i in range(record_count):
+            self._read_byte()
+            self._read_byte()
+            self._read_byte()
+        self._read_float()
+        self._read_float()
+        self._read_float()
+
+class Effect(Message):
+    def parse(self):
+        self._read_int()
+        self._read_int()
+        self._read_byte()
+        self._read_int()
+        self._read_int()
+        self._read_bool()
+
+class SoundEffect(Message):
+    def parse(self):
+        self._read_string()
+        self._read_int()
+        self._read_int()
+        self._read_int()
+        self._read_float()
+        self._read_ubyte()
+
+class Particle(Message):
+    def parse(self):
+        self._read_string()
+        self._read_float()
+        self._read_float()
+        self._read_float()
+        self._read_float()
+        self._read_float()
+        self._read_float()
+        self._read_float()
+        self._read_int()
+
+class ChangeGameState(Message):
+    def parse(self):
+        self._read_ubyte()
+        self._read_float()
+
+class SpawnGlobalEntity(Message):
+    def parse(self):
+        self._read_varint()
+        self._read_byte()
+        self._read_int()
+        self._read_int()
+        self._read_int()
+
+class OpenWindow(Message):
+    def parse(self):
+        self._read_ubyte()
+        self._read_ubyte()
+        self._read_string()
+        self._read_ubyte()
+        self._read_bool()
+        self._read_int()
+
+class CloseWindow(Message):
+    def parse(self):
+        self._read_ubyte()
+
+    def write(self):
+        raise NotImplementedError()
+
+class SetSlot(Message):
+    def parse(self):
+        self._read_byte()
+        self._read_short()
+        self._read_slot()
+
+class WindowItems(Message):
+    def parse(self):
+        self._read_ubyte()
+        slot_count = self._read_short()
+        for i in range(slot_count):
+            self._read_slot()
+
+class WindowProperty(Message):
+    def parse(self):
+        self._read_ubyte()
+        self._read_short()
+        self._read_short()
+
+class ConfirmTransaction(Message):
+    def parse(self):
+        self._read_ubyte()
+        self._read_short()
+        self._read_bool()
+
+    def write(self):
+        raise NotImplementedError()
+
+class UpdateSign(Message):
+    def parse(self):
+        self._read_int()
+        self._read_short()
+        self._read_int()
+        self._read_string()
+        self._read_string()
+        self._read_string()
+        self._read_string()
+
+    def write(self):
+        raise NotImplementedError()
+
+class Maps(Message):
+    def parse(self):
+        self._read_varint()
+        data_length = self._read_short()
+        self.buffer.read(data_length)
+
+class UpdateBlockEntity(Message):
+    def parse(self):
+        self._read_int()
+        self._read_short()
+        self._read_int()
+        self._read_ubyte()
+        data_length = self._read_short()
+        self.buffer.read(data_length)
+
+class SignEditorOpen(Message):
+    def parse(self):
+        self._read_int()
+        self._read_int()
+        self._read_int()
+
+class Statistics(Message):
+    def parse(self):
+        entry_count = self._read_varint()
+        for i in range(entry_count):
+            self._read_string()
+            self._read_varint()
+
+class PlayerListItem(Message):
+    def parse(self):
+        self._read_string()
+        self._read_bool()
+        self._read_short()
+
+class PlayerAbilities(Message):
+    def parse(self):
+        self._read_byte()
+        self._read_float()
+        self._read_float()
+
+    def write(self):
+        raise NotImplementedError()
+
+class TabComplete(Message):
+    def parse(self):
+        count = self._read_varint()
+        for i in range(count):
+            self._read_string()
+
+    def write(self):
+        raise NotImplementedError()
+
+class ScoreboardObjective(Message):
+    def parse(self):
+        self._read_string()
+        self._read_string()
+        self._read_byte()
+
+class UpdateScore(Message):
+    def parse(self):
+        self._read_string()
+        self._read_byte()
+        self._read_string()
+        self._read_int()
+
+class DisplayScoreboard(Message):
+    def parse(self):
+        self._read_byte()
+        self._read_string()
+
+class Teams(Message):
+    def parse(self):
+        self._read_string()
+        mode = self._read_byte()
+        if (mode is 0) or (mode is 2):
+            self._read_string()
+            self._read_string()
+            self._read_string()
+            self._read_byte()
+        if (mode is 0) or (mode is 3) or (mode is 4):
+            player_count = self._read_short()
+            for i in range(player_count):
+                self._read_string()
+
+class PluginMessage(Message):
+    def parse(self):
+        self._read_string()
+        data_length = self._read_short()
+        self.buffer.read(data_length)
+
+    def write(self):
+        raise NotImplementedError()
+
+class UseEntity(Message):
+    def write(self):
+        raise NotImplementedError()
+
+class Player(Message):
+    def write(self):
+        raise NotImplementedError()
+
+class PlayerPosition(Message):
+    def write(self):
+        raise NotImplementedError()
+
+class PlayerLook(Message):
+    def write(self):
+        raise NotImplementedError()
+
+class PlayerDigging(Message):
+    def write(self):
+        raise NotImplementedError()
+
+class PlayerBlockPlacement(Message):
+    def write(self):
+        raise NotImplementedError()
+
+class EntityAction(Message):
+    def write(self):
+        raise NotImplementedError()
+
+class SteerVehicle(Message):
+    def write(self):
+        raise NotImplementedError()
+
+class ClickWindow(Message):
+    def write(self):
+        raise NotImplementedError()
+
+class CreativeInventoryAction(Message):
+    def write(self):
+        raise NotImplementedError()
+
+class EnchantItem(Message):
+    def write(self):
+        raise NotImplementedError()
+
+class ClientSettings(Message):
+    def write(self):
+        raise NotImplementedError()
+
+class ClientStatus(Message):
+    def write(self):
+        raise NotImplementedError()
 
 class NetworkState(enum.Enum):
     handshake = 0
@@ -281,9 +858,75 @@ class DesktopProtocolClass(asyncio.Protocol):
         self.current_state = NetworkState.handshake
 
         # Message delegates
-        # tuple format: (message_receive_handler, message_send_handler)
+        # Tuple format: (message_receive_handler, message_send_handler)
 
-        self.play_message_delegates = dict()
+        self.play_message_delegates = {
+            0x00: (KeepAlive, KeepAlive),
+            0x01: (JoinGame, ChatMessage),
+            0x02: (ChatMessage, UseEntity),
+            0x03: (TimeUpdate, Player),
+            0x04: (EntityEquipment, PlayerPosition),
+            0x05: (SpawnPosition, PlayerLook),
+            0x06: (UpdateHealth, PlayerPositionAndLook),
+            0x07: (Respawn, PlayerDigging),
+            0x08: (PlayerPositionAndLook, PlayerBlockPlacement),
+            0x09: (HeldItemChange, HeldItemChange),
+            0x0A: (UseBed, Animation),
+            0x0B: (Animation, EntityAction),
+            0x0C: (SpawnPlayer, SteerVehicle),
+            0x0D: (CollectItem, CloseWindow),
+            0x0E: (SpawnObject, ClickWindow),
+            0x0F: (SpawnMob, ConfirmTransaction),
+            0x10: (SpawnPainting, CreativeInventoryAction),
+            0x11: (SpawnExperienceOrb, EnchantItem),
+            0x12: (EntityVelocity, UpdateSign),
+            0x13: (DestroyEntities, PlayerAbilities),
+            0x14: (Entity, TabComplete),
+            0x15: (EntityRelativeMove, ClientSettings),
+            0x16: (EntityLook, ClientStatus),
+            0x17: (EntityLookAndRelativeMove, None),
+            0x18: (EntityTeleport, None),
+            0x19: (EntityHeadLook, None),
+            0x1A: (EntityStatus, None),
+            0x1B: (AttachEntity, None),
+            0x1C: (EntityMetadata, None),
+            0x1D: (EntityEffect, None),
+            0X1E: (RemoveEntityEffect, None),
+            0x1F: (SetExperience, None),
+            0x20: (EntityProperties, None),
+            0x21: (ChunkData, None),
+            0x22: (MultiBlockChange, None),
+            0x23: (BlockChange, None),
+            0x24: (BlockAction, None),
+            0x25: (BlockBreakAnimation, None),
+            0x26: (MapChunkBulk, None),
+            0x27: (Explosion, None),
+            0x28: (Effect, None),
+            0x29: (SoundEffect, None),
+            0x2A: (Particle, None),
+            0x2B: (ChangeGameState, None),
+            0x2C: (SpawnGlobalEntity, None),
+            0x2D: (OpenWindow, None),
+            0x2E: (CloseWindow, None),
+            0x2F: (SetSlot, None),
+            0x30: (WindowItems, None),
+            0x31: (WindowProperty, None),
+            0x32: (ConfirmTransaction, None),
+            0x33: (UpdateSign, None),
+            0x34: (Maps, None),
+            0x35: (UpdateBlockEntity, None),
+            0x36: (SignEditorOpen, None),
+            0x37: (Statistics, None),
+            0x38: (PlayerListItem, None),
+            0x39: (PlayerAbilities, None),
+            0x3A: (TabComplete, None),
+            0x3B: (ScoreboardObjective, None),
+            0x3C: (UpdateScore, None),
+            0x3D: (DisplayScoreboard, None),
+            0x3E: (Teams, None),
+            0x3F: (PluginMessage, None),
+            0x40: (Disconnect, None)
+        }
 
         self.login_message_delegates = {
             0x00: (Disconnect, LoginStart),
@@ -332,10 +975,13 @@ class DesktopProtocolClass(asyncio.Protocol):
             message_buffer = io.BytesIO(message_data)
             message_id = yield from self._unpack_varint(message_buffer)
             if self.current_state == NetworkState.play:
+                print("Received Play: " + self.play_message_delegates[message_id][0].__name__)
                 self.play_message_delegates[message_id][0](message_buffer).parse()
             elif self.current_state == NetworkState.login:
+                print("Received Login: " + self.login_message_delegates[message_id][0].__name__)
                 self.login_message_delegates[message_id][0](message_buffer).parse()
             elif self.current_state == NetworkState.handshake:
+                print("Received Handshake: " + self.handshake_message_delegates[message_id][0].__name__)
                 self.handshake_message_delegates[message_id][0](message_buffer).parse()
             else:
                 raise Exception("Invalid state" + str(self.current_state))
@@ -348,6 +994,7 @@ class DesktopProtocolClass(asyncio.Protocol):
     # Public methods
 
     def set_current_state(self, newstate):
+        print("Now state: " + newstate.name)
         self.current_state = newstate
 
     def send_message(self, message_id, *args):
@@ -356,10 +1003,13 @@ class DesktopProtocolClass(asyncio.Protocol):
         # Needs to lock? (depends if transport is thread-safe)
         write_buffer = io.BytesIO()
         if self.current_state == NetworkState.play:
+            print("Sending Play: " + self.play_message_delegates[message_id][1].__name__)
             self.play_message_delegates[message_id][1](write_buffer).write(*args)
         elif self.current_state == NetworkState.login:
+            print("Sending Login: " + self.login_message_delegates[message_id][1].__name__)
             self.login_message_delegates[message_id][1](write_buffer).write(*args)
         elif self.current_state == NetworkState.handshake:
+            print("Sending Handshake: " + self.handshake_message_delegates[message_id][1].__name__)
             self.handshake_message_delegates[message_id][1](write_buffer).write(*args)
         else:
             raise Exception("Invalid state" + str(self.current_state))
@@ -379,7 +1029,6 @@ class DesktopProtocolClass(asyncio.Protocol):
 
         self.send_message(0x00) # Handshake
         self.set_current_state(NetworkState.login)
-        print("Now Login state")
         self.send_message(0x00) # Login start
 
     def data_received(self, data):
