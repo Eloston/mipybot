@@ -13,13 +13,11 @@ You should have received a copy of the GNU General Public License
 along with MiPyBot.  If not, see {http://www.gnu.org/licenses/}.
 '''
 
-
-
-class WindowManagerClass:
+class EntityManagerClass:
     pass
 
-WindowManager = None
+EntityManager = None
 
 def init(*args):
-    global WindowManager
-    WindowManager = WindowManagerClass(*args)
+    global EntityManager
+    EntityManager = EntityManagerClass(*args)

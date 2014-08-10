@@ -23,16 +23,14 @@ class NetworkManagerClass:
         self.host_spoof = host_spoof
         self.port_spoof = port_spoof
 
-    def send_message(message_id, *args):
-        mipybot.networking.desktop.Protocol.send_message(message_id, *args)
-
-    def start(self):
-        loop = asyncio.get_event_loop()
+        self.event_loop = asyncio.get_event_loop()
         mipybot.networking.desktop.init()
-        coro = loop.create_connection(lambda: mipybot.networking.desktop.Protocol, self.host, self.port)
-        loop.run_until_complete(coro)
-        loop.run_forever()
-        loop.close()
+        coro = self.event_loop.create_connection(lambda: mipybot.networking.desktop.Protocol, self.host, self.port)
+        self.event_loop.create_task(coro)
+
+    def send_message(message_id, *args):
+        # TODO: Decide which send_message to use depending whether this is the desktop or pocket protocol
+        self.event_loop.call_soon_threadsafe(mipybot.networking.desktop.Protocol.send_message, message_id, *args)
 
 NetworkManager = None
 

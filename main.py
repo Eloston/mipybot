@@ -14,6 +14,7 @@ along with MiPyBot.  If not, see {http://www.gnu.org/licenses/}.
 '''
 
 import argparse
+import asyncio
 import mipybot.networking
 import mipybot.player
 
@@ -26,6 +27,13 @@ if __name__ == '__main__':
     arg_parser.add_argument("--playername", help="The in-game name to use", type=str, default="Player")
     arg_returns = arg_parser.parse_args()
 
+    print("***MiPyBot INIT***")
+
     mipybot.networking.init(arg_returns.host, arg_returns.port, arg_returns.host_spoof, arg_returns.port_spoof)
     mipybot.player.init(arg_returns.playername)
-    mipybot.networking.NetworkManager.start()
+
+    loop = asyncio.get_event_loop()
+    print("***MiPyBot START***")
+    loop.run_forever()
+    print("***MiPyBot STOP***")
+    loop.close()

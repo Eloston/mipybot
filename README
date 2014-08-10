@@ -9,4 +9,6 @@ MiPyBot will support Minecraft 1.7 (or 1.8 depending on development rate) in the
 
 There are also plans to support Minecraft Pocket Edition.
 
-This project is licensed under the GNU GPL version 3. You can find a copy of the license in COPYING
+This project is licensed under the GNU GPL version 3. You can find a copy of the license in LICENSE
+
+Source code under 'third_party' are from third-party libraries. Consult the 'LICENSE' file in each library's directory to find its licensing terms.

@@ -13,13 +13,4 @@ You should have received a copy of the GNU General Public License
 along with MiPyBot.  If not, see {http://www.gnu.org/licenses/}.
 '''
 
-
-
-class WindowManagerClass:
-    pass
-
-WindowManager = None
-
-def init(*args):
-    global WindowManager
-    WindowManager = WindowManagerClass(*args)
+# Do not delete this file
