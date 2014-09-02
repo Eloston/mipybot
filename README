@@ -3,7 +3,9 @@ MiPyBot
 MInecraft PYthon roBOT
 ------------------------
 
-MiPyBot is a Minecraft robot written in Python 3.4
+MiPyBot is a Minecraft robot written in Python 3.4.
+It uses the asyncio module for an event loop.
+It is inspired by other Minecraft robots.
 
 MiPyBot will support Minecraft 1.7 (or 1.8 depending on development rate) in the future.
 

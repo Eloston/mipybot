@@ -26,6 +26,9 @@ from Crypto.PublicKey import RSA
 
 import mipybot.networking
 import mipybot.player
+import mipybot.chat
+import mipybot.world.items
+import mipybot.windows
 
 from third_party import pynbt
 
@@ -179,18 +182,57 @@ class Message:
 
     # slot
 
-    def read_slot():
-        # This is a stub
-        blockid = Message.read_short()
-        if not blockid == -1:
-            Message.read_byte()
-            Message.read_short()
+    def read_slot(index=None):
+        item_id = Message.read_short()
+        if item_id == -1:
+            return mipybot.windows.Slot(None, index)
+        else:
+            item_type = mipybot.world.items.ItemTypes(item_id)
+            item_count = Message.read_byte()
+            item_damage = Message.read_short()
             metadatalength = Message.read_short()
-            if not metadatalength == -1:
+            if metadatalength == -1:
+                enchantments = None
+            else:
+                enchantments = dict()
                 nbt_parser = pynbt.NBTFile(io=io.BytesIO(gzip.decompress(Message.read_raw(metadatalength))))
+                for tag_compound in nbt_parser["ench"]:
+                    enchantment_type = mipybot.world.items.ItemEnchantments(tag_compound["id"].value)
+                    enchantment_level = tag_compound["lvl"].value
+                    enchantments[enchantment_type] = enchantment_level
+            if item_type in mipybot.world.items.SubclassItemMapping:
+                slot_item = mipybot.world.items.SubclassItemMapping[item_type](item_type, item_count, item_damage, enchantments)
+            else:
+                slot_item = mipybot.world.items.Item(item_type, item_count, item_damage, enchantments)
+            slot_obj = mipybot.windows.Slot(slot_item, index)
+            return slot_obj
 
-    def write_slot():
-        raise NotImplementedError()
+    def write_slot(slot_obj):
+        if slot_obj.item is None:
+            Message.write_short(-1)
+        else:
+            Message.write_short(slot_obj.item.type.value)
+            Message.write_byte(slot_obj.item.count)
+            Message.write_short(slot_obj.item.damage)
+            if slot_obj.item.enchantments is None:
+                Message.write_short(-1)
+            else:
+                enchantment_dict = dict()
+                nbt_list = list()
+                for enchantment_type in slot_obj.item.enchantments:
+                    temp_dict = dict()
+                    temp_dict["id"] = pynbt.TAG_Short(enchantment_type.value)
+                    temp_dict["lvl"] = pynbt.TAG_Short(slot_obj.item.enchantments[enchantment_type])
+                    nbt_list.append(temp_dict)
+                enchantment_dict["ench"] = pynbt.TAG_List(pynbt.TAG_Compound, nbt_list)
+                nbt_writer = pynbt.NBTFile(value=enchantment_dict)
+                nbt_data_io = io.BytesIO()
+                nbt_writer.save(nbt_data_io)
+                nbt_data_io.seek(0)
+                nbt_data = nbt_data_io.read()
+                nbt_data_io.close()
+                Message.write_short(len(nbt_data))
+                Message.write_raw(nbt_data)
 
     # metadata
 
@@ -302,12 +344,13 @@ class JoinGame:
         Message.read_ubyte() # Difficulty
         Message.read_ubyte() # Max players, for drawing player list
         Message.read_string() # Level type
+        Protocol.send_message(0x15) # ClientSettings
 
 class ChatMessage:
     def parse():
-        print("Chat: " + Message.read_json())
+        mipybot.chat.ChatManager.process_chat(Message.read_string())
 
-    def write:
+    def write(message):
         Message.write_string(message)
 
 class TimeUpdate:
@@ -659,32 +702,42 @@ class SpawnGlobalEntity:
 
 class OpenWindow:
     def parse():
-        Message.read_ubyte()
-        Message.read_ubyte()
-        Message.read_string()
-        Message.read_ubyte()
-        Message.read_bool()
-        Message.read_int()
+        window_id = Message.read_ubyte()
+        window_type = mipybot.windows.WindowTypes[Message.read_ubyte()]
+        window_title = Message.read_string()
+        slot_count = Message.read_ubyte() # TODO: Use for determining chest size
+        is_actual_title = Message.read_bool()
+        if window_type == 11:
+            Message.read_int()
+        mipybot.windows.WindowManager.open(window_type(window_id, window_title))
 
 class CloseWindow:
     def parse():
-        Message.read_ubyte()
+        window_id = Message.read_ubyte()
+        if not window_id == 0:
+            mipybot.windows.WindowManager.close(mipybot.windows.WindowManager.windows[window_id], False)
 
-    def write():
-        raise NotImplementedError()
+    def write(window_obj):
+        Message.write_byte(window_obj.id)
 
 class SetSlot:
     def parse():
-        Message.read_byte()
-        Message.read_short()
-        Message.read_slot()
+        window_id = Message.read_byte()
+        slot_index = Message.read_short()
+        slot_obj = Message.read_slot(slot_index)
+        if (window_id < 0) or (slot_index < 0):
+            print("WARNING: Ignoring invalid SetSlot values: " + ", ".join([str(window_id), str(slot_index)]))
+        else:
+            mipybot.windows.WindowManager.set_slots(window_id, {slot_index: slot_obj})
 
 class WindowItems:
     def parse():
-        Message.read_ubyte()
+        window_id = Message.read_ubyte()
         slot_count = Message.read_short()
+        slot_dict = dict()
         for i in range(slot_count):
-            Message.read_slot()
+            slot_dict[i] = Message.read_slot(i)
+        mipybot.windows.WindowManager.set_slots(window_id, slot_dict)
 
 class WindowProperty:
     def parse():
@@ -694,12 +747,16 @@ class WindowProperty:
 
 class ConfirmTransaction:
     def parse():
-        Message.read_ubyte()
-        Message.read_short()
-        Message.read_bool()
+        window_id = Message.read_ubyte()
+        action_id = Message.read_short()
+        is_accepted = Message.read_bool()
+        Protocol.send_message(0x0F, window_id, action_id, True)
+        mipybot.windows.WindowManager.confirm_transaction(window_id, is_accepted)
 
-    def write():
-        raise NotImplementedError()
+    def write(window_id, action_id, is_accepted):
+        Message.write_ubyte(window_id)
+        Message.write_short(action_id)
+        Message.write_bool(is_accepted)
 
 class UpdateSign:
     def parse():
@@ -840,8 +897,13 @@ class SteerVehicle:
         raise NotImplementedError()
 
 class ClickWindow:
-    def write():
-        raise NotImplementedError()
+    def write(action_number, window_obj, slot_obj, mode, button):
+        Message.write_byte(window_obj.id)
+        Message.write_short(slot_obj.index)
+        Message.write_byte(button)
+        Message.write_short(action_number)
+        Message.write_byte(mode)
+        Message.write_slot(slot_obj)
 
 class CreativeInventoryAction:
     def write():
@@ -853,7 +915,12 @@ class EnchantItem:
 
 class ClientSettings:
     def write():
-        raise NotImplementedError()
+        Message.write_string("en_US") # Locale
+        Message.write_byte(0) # Far
+        Message.write_byte(0) # All chat
+        Message.write_bool(False) # Do not want chat colors
+        Message.write_byte(2) # Normal difficulty
+        Message.write_bool(False) # No need to show cape
 
 class ClientStatus:
     def write():
@@ -989,13 +1056,13 @@ class DesktopProtocolClass(asyncio.Protocol):
             Message.read_buffer.seek(0)
             message_id = yield from self._unpack_varint(Message.read_buffer)
             if self.current_state == NetworkState.play:
-                print("Received Play: " + self.play_message_delegates[message_id][0].__name__)
+                #print("Received Play: " + self.play_message_delegates[message_id][0].__name__)
                 self.play_message_delegates[message_id][0].parse()
             elif self.current_state == NetworkState.login:
-                print("Received Login: " + self.login_message_delegates[message_id][0].__name__)
+                #print("Received Login: " + self.login_message_delegates[message_id][0].__name__)
                 self.login_message_delegates[message_id][0].parse()
             elif self.current_state == NetworkState.handshake:
-                print("Received Handshake: " + self.handshake_message_delegates[message_id][0].__name__)
+                #print("Received Handshake: " + self.handshake_message_delegates[message_id][0].__name__)
                 self.handshake_message_delegates[message_id][0].parse()
             else:
                 raise Exception("Invalid state" + str(self.current_state))
@@ -1019,13 +1086,13 @@ class DesktopProtocolClass(asyncio.Protocol):
         Message.write_buffer.seek(0)
         Message.write_buffer.truncate(0)
         if self.current_state == NetworkState.play:
-            print("Sending Play: " + self.play_message_delegates[message_id][1].__name__)
+            #print("Sending Play: " + self.play_message_delegates[message_id][1].__name__)
             self.play_message_delegates[message_id][1].write(*args)
         elif self.current_state == NetworkState.login:
-            print("Sending Login: " + self.login_message_delegates[message_id][1].__name__)
+            #print("Sending Login: " + self.login_message_delegates[message_id][1].__name__)
             self.login_message_delegates[message_id][1].write(*args)
         elif self.current_state == NetworkState.handshake:
-            print("Sending Handshake: " + self.handshake_message_delegates[message_id][1].__name__)
+            #print("Sending Handshake: " + self.handshake_message_delegates[message_id][1].__name__)
             self.handshake_message_delegates[message_id][1].write(*args)
         else:
             raise Exception("Invalid state" + str(self.current_state))

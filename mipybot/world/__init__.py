@@ -13,9 +13,4 @@ You should have received a copy of the GNU General Public License
 along with MiPyBot.  If not, see {http://www.gnu.org/licenses/}.
 '''
 
-import mipybot.tasks.slot_printer
-import mipybot.tasks.spew_items
-
-def init():
-    #mipybot.tasks.slot_printer.init()
-    mipybot.tasks.spew_items.init()
+# Do not remove this file

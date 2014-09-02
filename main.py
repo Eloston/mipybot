@@ -17,6 +17,9 @@ import argparse
 import asyncio
 import mipybot.networking
 import mipybot.player
+import mipybot.chat
+import mipybot.windows
+import mipybot.tasks
 
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser()
@@ -31,6 +34,9 @@ if __name__ == '__main__':
 
     mipybot.networking.init(arg_returns.host, arg_returns.port, arg_returns.host_spoof, arg_returns.port_spoof)
     mipybot.player.init(arg_returns.playername)
+    mipybot.windows.init()
+    mipybot.chat.init()
+    mipybot.tasks.init()
 
     loop = asyncio.get_event_loop()
     print("***MiPyBot START***")

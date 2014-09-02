@@ -13,9 +13,26 @@ You should have received a copy of the GNU General Public License
 along with MiPyBot.  If not, see {http://www.gnu.org/licenses/}.
 '''
 
-import mipybot.tasks.slot_printer
-import mipybot.tasks.spew_items
+# An implementation of the Observer pattern
+# Used in Managers
 
-def init():
-    #mipybot.tasks.slot_printer.init()
-    mipybot.tasks.spew_items.init()
+class Observable:
+    def __init__(self):
+        self.observers = list()
+
+    def add_observer(self, observer_obj):
+        self.observers.append(observer_obj)
+
+    def remove_observer(self, observer_obj):
+        self.observers.remove(observer_obj)
+
+    def notify_observers(self, *args):
+        for observer in self.observers:
+            observer.notify(*args)
+
+class Observer:
+    def __init__(self, function=lambda: None):
+        self.callback = function
+
+    def notify(self, *args):
+        self.callback(*args)

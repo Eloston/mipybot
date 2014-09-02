@@ -28,7 +28,7 @@ class NetworkManagerClass:
         coro = self.event_loop.create_connection(lambda: mipybot.networking.desktop.Protocol, self.host, self.port)
         self.event_loop.create_task(coro)
 
-    def send_message(message_id, *args):
+    def send_message(self, message_id, *args):
         # TODO: Decide which send_message to use depending whether this is the desktop or pocket protocol
         self.event_loop.call_soon_threadsafe(mipybot.networking.desktop.Protocol.send_message, message_id, *args)
 

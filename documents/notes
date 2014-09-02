@@ -26,6 +26,7 @@ Player (through Player Manager)
     -Retrieve inventory through Window Manager
     -Game Mode (NOTE: Move to Player Entity if the information is available for all players)
     -Bed Location (NOTE: Move to Player Entity if the information is available for all players)
+    -Dead or alive
 Windows (through Window Manager)
     -Interface for Inventory, chest, crafting table, furnace, etc.
         -Player inventory events are emitted from the inventory window
@@ -48,6 +49,7 @@ Entities (through Entity Manager)
 Chat (through Chat Manager)
     -Send/receive chat messages
     -Tab-completion?
+    -Regular expression matcher
 Scoreboard (through Scoreboard Manager)
 Statistics (through Statistics Manager)
 User scripts (through Scripts Manager)
